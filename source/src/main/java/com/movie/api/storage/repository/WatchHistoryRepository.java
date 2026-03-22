@@ -1,0 +1,68 @@
+package com.movie.api.storage.repository;
+
+import com.movie.api.storage.model.WatchHistory;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long>, JpaSpecificationExecutor<WatchHistory> {
+    Optional<WatchHistory> findByMovieItemIdAndUserId(Long movieItemId, Long userId);
+
+    @Query("SELECT wh From WatchHistory wh " +
+            "WHERE wh.movie.id = :movieId " +
+            "AND wh.user.id = :userId " +
+            "AND wh.movieItem IS NULL")
+    Optional<WatchHistory> findWatchHistoryMovie(@Param("movieId") Long movieId, @Param("userId") Long userId);
+
+    @Query("SELECT COUNT(wh) FROM WatchHistory wh " +
+            "WHERE wh.movie.id = :movieId " +
+            "AND wh.user.id = :userId " +
+            "AND wh.isCompleted = true " +
+            "AND wh.movieItem IS NOT NULL " +
+            "AND wh.status = :status")
+    Long countCompletedWatchHistory(@Param("movieId") Long movieId, @Param("userId") Long userId, @Param("status") Integer status);
+
+    @Query(
+            "SELECT wh FROM WatchHistory wh " +
+                    "WHERE wh.user.id = :userId " +
+                    "AND wh.isCompleted = false " +
+                    "AND wh.status = 1 " +
+                    "AND wh.movieItem IS NOT NULL " +
+                    "AND wh.modifiedDate = ( " +
+                    "    SELECT MAX(wh2.modifiedDate) " +
+                    "    FROM WatchHistory wh2 " +
+                    "    WHERE wh2.user.id = wh.user.id " +
+                    "    AND wh2.movie.id = wh.movie.id " +
+                    "    AND wh2.isCompleted = false " +
+                    "    AND wh2.status = 1 " +
+                    ") " +
+                    "ORDER BY wh.modifiedDate DESC"
+    )
+    List<WatchHistory> findLatestInProgressGroupedByMovie(@Param("userId") Long userId);
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM WatchHistory WHERE movie.id = :movieId")
+    void deleteByMovieId(@Param("movieId") Long movieId);
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM WatchHistory WHERE user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM WatchHistory WHERE movieItem.id IN :movieItemIds")
+    void deleteByMovieItemIds(@Param("movieItemIds") List<Long> movieItemIds);
+
+    @Transactional
+    @Modifying
+    @Query("update WatchHistory wh set wh.status = :statusDelete where wh.user.id = :userId and wh.movie.id = :movieId")
+    void softDeleteByUserIdAndMovieId(@Param("statusDelete") Integer statusDelete, @Param("userId") Long userId, @Param("movieId") Long movieId);
+}

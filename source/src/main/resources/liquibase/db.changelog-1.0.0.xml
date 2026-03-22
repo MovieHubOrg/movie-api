@@ -1,0 +1,738 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1774111896352-1">
+        <createTable tableName="db_account">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_accountPK"/>
+            </column>
+            <column name="kind" type="INT"/>
+            <column name="username" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="full_name" type="VARCHAR(255)"/>
+            <column name="avatar_path" type="VARCHAR(255)"/>
+            <column name="gender" type="INT"/>
+            <column name="is_vip" type="BIT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-2">
+        <createTable tableName="db_app_version">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_app_versionPK"/>
+            </column>
+            <column name="code" type="INT"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="force_update" type="BIT"/>
+            <column name="file_path" type="VARCHAR(255)"/>
+            <column name="is_latest" type="BIT"/>
+            <column name="change_log" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-3">
+        <createTable tableName="db_category">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_categoryPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="slug" type="VARCHAR(255)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-4">
+        <createTable tableName="db_collection">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_collectionPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="color" type="VARCHAR(255)"/>
+            <column name="ordering" type="INT"/>
+            <column name="style_id" type="BIGINT"/>
+            <column name="type" type="INT"/>
+            <column name="filter" type="VARCHAR(255)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-5">
+        <createTable tableName="db_collection_item">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_collection_itemPK"/>
+            </column>
+            <column name="collection_id" type="BIGINT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="ordering" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-6">
+        <createTable tableName="db_comment">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_commentPK"/>
+            </column>
+            <column name="content" type="LONGTEXT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="movie_item_id" type="BIGINT"/>
+            <column name="account_id" type="BIGINT"/>
+            <column name="author_info" type="TEXT"/>
+            <column name="reply_to_id" type="BIGINT"/>
+            <column name="reply_to_info" type="TEXT"/>
+            <column name="parent_id" type="BIGINT"/>
+            <column name="is_pinned" type="BIT"/>
+            <column name="total_children" type="INT"/>
+            <column name="total_like" type="INT"/>
+            <column name="total_dislike" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-7">
+        <createTable tableName="db_favourite">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_favouritePK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="type" type="INT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="person_id" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-8">
+        <createTable tableName="db_movie">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_moviePK"/>
+            </column>
+            <column name="title" type="VARCHAR(255)"/>
+            <column name="original_title" type="VARCHAR(255)"/>
+            <column name="slug" type="VARCHAR(255)"/>
+            <column name="description" type="LONGTEXT"/>
+            <column name="thumbnail_url" type="VARCHAR(255)"/>
+            <column name="poster_url" type="VARCHAR(255)"/>
+            <column name="image_title_url" type="VARCHAR(255)"/>
+            <column name="release_date" type="datetime"/>
+            <column name="type" type="INT"/>
+            <column name="is_featured" type="BIT"/>
+            <column name="language" type="VARCHAR(255)"/>
+            <column name="country" type="VARCHAR(255)"/>
+            <column name="age_rating" type="INT"/>
+            <column name="year" type="INT"/>
+            <column name="view_count" type="BIGINT"/>
+            <column name="comment_count" type="BIGINT"/>
+            <column name="review_count" type="BIGINT"/>
+            <column name="average_rating" type="DOUBLE PRECISION"/>
+            <column name="metadata" type="LONGTEXT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-9">
+        <createTable tableName="db_movie_category">
+            <column name="movie_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-10">
+        <createTable tableName="db_movie_item">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_movie_itemPK"/>
+            </column>
+            <column name="title" type="VARCHAR(255)"/>
+            <column name="description" type="LONGTEXT"/>
+            <column name="kind" type="INT"/>
+            <column name="label" type="VARCHAR(255)"/>
+            <column name="ordering" type="INT"/>
+            <column name="parent_id" type="BIGINT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="video_id" type="BIGINT"/>
+            <column name="release_date" type="datetime"/>
+            <column name="total_episode" type="INT"/>
+            <column name="thumbnail_url" type="VARCHAR(255)"/>
+            <column name="is_latest" type="BIT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-11">
+        <createTable tableName="db_movie_person">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_movie_personPK"/>
+            </column>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="person_id" type="BIGINT"/>
+            <column name="kind" type="INT"/>
+            <column name="ordering" type="INT"/>
+            <column name="character_name" type="VARCHAR(255)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-12">
+        <createTable tableName="db_person">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_personPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="other_name" type="VARCHAR(255)"/>
+            <column name="avatar_path" type="VARCHAR(255)"/>
+            <column name="bio" type="LONGTEXT"/>
+            <column name="gender" type="INT"/>
+            <column name="date_of_birth" type="datetime"/>
+            <column name="country" type="VARCHAR(255)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-13">
+        <createTable tableName="db_person_kind">
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-14">
+        <createTable tableName="db_playlist">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_playlistPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="total_movie" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-15">
+        <createTable tableName="db_playlist_item">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_playlist_itemPK"/>
+            </column>
+            <column name="playlist_id" type="BIGINT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-16">
+        <createTable tableName="db_reaction">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_reactionPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="type" type="INT"/>
+            <column name="comment_id" type="BIGINT"/>
+            <column name="review_id" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-17">
+        <createTable tableName="db_review">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_reviewPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="rate" type="INT"/>
+            <column name="content" type="LONGTEXT"/>
+            <column name="total_like" type="INT"/>
+            <column name="total_dislike" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-18">
+        <createTable tableName="db_side_bar">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_side_barPK"/>
+            </column>
+            <column name="description" type="LONGTEXT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="web_thumbnail_url" type="VARCHAR(255)"/>
+            <column name="mobile_thumbnail_url" type="VARCHAR(255)"/>
+            <column name="main_color" type="VARCHAR(255)"/>
+            <column name="ordering" type="INT"/>
+            <column name="active" type="BIT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-19">
+        <createTable tableName="db_style">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_stylePK"/>
+            </column>
+            <column name="type" type="INT"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="is_default" type="BIT"/>
+            <column name="description" type="LONGTEXT"/>
+            <column name="image_mobile_url" type="VARCHAR(255)"/>
+            <column name="image_web_url" type="VARCHAR(255)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-20">
+        <createTable tableName="db_video_library">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_video_libraryPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="description" type="LONGTEXT"/>
+            <column name="source_type" type="INT"/>
+            <column name="content" type="VARCHAR(255)"/>
+            <column name="relative_content_path" type="VARCHAR(255)"/>
+            <column name="sprite_url" type="VARCHAR(255)"/>
+            <column name="vtt_url" type="VARCHAR(255)"/>
+            <column name="thumbnail_url" type="VARCHAR(255)"/>
+            <column name="duration" type="BIGINT"/>
+            <column name="intro_start" type="BIGINT"/>
+            <column name="intro_end" type="BIGINT"/>
+            <column name="outro_start" type="BIGINT"/>
+            <column name="state" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-21">
+        <createTable tableName="db_watch_history">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_watch_historyPK"/>
+            </column>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="user_id" type="BIGINT"/>
+            <column name="movie_item_id" type="BIGINT"/>
+            <column name="last_watch_seconds" type="BIGINT"/>
+            <column name="is_completed" type="BIT"/>
+            <column name="times_watched" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-22">
+        <addUniqueConstraint columnNames="user_id, movie_item_id" constraintName="uk_watch_history_user_movie_item"
+                             tableName="db_watch_history"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-23">
+        <createIndex indexName="inx_movie_kind" tableName="db_movie_item">
+            <column name="movie_id"/>
+            <column name="kind"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-24">
+        <addForeignKeyConstraint baseColumnNames="movie_item_id" baseTableName="db_watch_history"
+                                 constraintName="FK1lnws8lxiodo0x3pldfbqt9tj" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id"
+                                 referencedTableName="db_movie_item" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-25">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_side_bar"
+                                 constraintName="FK1ptu97c2eu0vmb10u9kt4mohk" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-26">
+        <addForeignKeyConstraint baseColumnNames="video_id" baseTableName="db_movie_item"
+                                 constraintName="FK1wut5rjsmmef7b6tmtn753mv0" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id"
+                                 referencedTableName="db_video_library" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-27">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="db_favourite"
+                                 constraintName="FK3o2oxprtlwrdcgogky84kx2wp" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_person"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-28">
+        <addForeignKeyConstraint baseColumnNames="playlist_id" baseTableName="db_playlist_item"
+                                 constraintName="FK4truhw4enu39jj8gkathv5x8f" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_playlist"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-29">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_playlist"
+                                 constraintName="FK5jcvuxbdi9a0r82gl0xjhio8q" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-30">
+        <addForeignKeyConstraint baseColumnNames="reply_to_id" baseTableName="db_comment"
+                                 constraintName="FK5pg2749fwmv4wvg434lb3ygxt" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-31">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_movie_person"
+                                 constraintName="FK5ppeusol4pm8fa0v94dgyafdi" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-32">
+        <addForeignKeyConstraint baseColumnNames="collection_id" baseTableName="db_collection_item"
+                                 constraintName="FK7t4sc5vsxmrc0d1x9d3gru3c2" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id"
+                                 referencedTableName="db_collection" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-33">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_watch_history"
+                                 constraintName="FK7vgy6y5dfr4rtvhh66ivr0p8a" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-34">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_playlist_item"
+                                 constraintName="FK8n1gve3ujnj5gwv1ksk5k9ayw" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-35">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_movie_item"
+                                 constraintName="FK9lsyj96bpy3yw289qovi5c6lt" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-36">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_favourite"
+                                 constraintName="FKc4yy4226avrkdyowk82kjgg9a" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-37">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_favourite"
+                                 constraintName="FKcf1in3gth21j5eu04hm8xoodr" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-38">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="db_person_kind"
+                                 constraintName="FKfxesqkuq46nj867b95wc5ttci" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_person"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-39">
+        <addForeignKeyConstraint baseColumnNames="movie_item_id" baseTableName="db_comment"
+                                 constraintName="FKhjn76ifljdndda7pij2qos0lc" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id"
+                                 referencedTableName="db_movie_item" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-40">
+        <addForeignKeyConstraint baseColumnNames="style_id" baseTableName="db_collection"
+                                 constraintName="FKi0rqkrebb7v7vxvnhkxd86urx" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_style"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-41">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_watch_history"
+                                 constraintName="FKk1s5e02swkninsoqlompj75tn" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-42">
+        <addForeignKeyConstraint baseColumnNames="account_id" baseTableName="db_comment"
+                                 constraintName="FKktcg7wyjg6a35rpmjudjdotv7" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-43">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_review"
+                                 constraintName="FKm4rvdueoeyrp7xq2vpttcdbyg" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-44">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_collection_item"
+                                 constraintName="FKncn6nee37mcvwjoo9ydt874m5" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-45">
+        <addForeignKeyConstraint baseColumnNames="category_id" baseTableName="db_movie_category"
+                                 constraintName="FKnwoqvjbydwqilv6cbw6guh839" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_category"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-46">
+        <addForeignKeyConstraint baseColumnNames="movie_id" baseTableName="db_movie_category"
+                                 constraintName="FKotcsg8vx36iyex2s0s5t3c928" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-47">
+        <addForeignKeyConstraint baseColumnNames="parent_id" baseTableName="db_comment"
+                                 constraintName="FKpleyflkw31x80138vf2a6n75d" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_comment"
+                                 validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-48">
+        <addForeignKeyConstraint baseColumnNames="parent_id" baseTableName="db_movie_item"
+                                 constraintName="FKqlmqpfgvxl14djnndsgylpxy9" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id"
+                                 referencedTableName="db_movie_item" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1774111896352-49">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="db_movie_person"
+                                 constraintName="FKs2h3vns3rp5rtm6foqg4glp3p" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_person"
+                                 validate="true"/>
+    </changeSet>
+</databaseChangeLog>
