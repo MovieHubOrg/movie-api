@@ -1,0 +1,44 @@
+target/
+deploy/
+deploy-dev/
+dev-ops/
+docker/
+logs/
+db/
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+*.log
+
+### NetBeans ###
+/nbproject/private/
+/build/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# project ignore
+source/com-movie-api/application-prod.properties
+source/com-movie-api/deploy_ec2.sh
+source/com-movie-api/execute_jar_on_vm.sh
+source/com-movie-api/target
+source/com-movie-api/logs
+source/com-movie-api/.idea
+source/com-movie-api/*.iml
+
+# Environment
+.env
