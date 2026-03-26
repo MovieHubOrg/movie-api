@@ -1,6 +1,5 @@
 package com.movie.api.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.form.sns.BaseSendSignalForm;
@@ -22,18 +21,11 @@ public class SnsService {
     @Autowired
     private RabbitService rabbitService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    public <T> void sendSignalForAllTenantApp(T data) {
-        sendSignal(data, BaseConstant.APP_TENANT);
-    }
-
-    public <T> void sendSignal(T data, String app) {
+    public <T> void sendSignal(T data, Integer userKind) {
         try {
             BaseSendSignalForm<T> form = new BaseSendSignalForm<>();
+            form.setUserKind(userKind);
             form.setPayload(data);
-            form.setApp(app);
 
             rabbitService.handleSendMsg(
                     appName,

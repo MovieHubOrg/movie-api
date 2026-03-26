@@ -27,7 +27,7 @@ public class SnsController extends ABasicController {
         signalPayload.setSubCmd(form.getSubCmd());
         signalPayload.setData(form.getPayload());
 
-        snsService.sendSignalForAllTenantApp(signalPayload);
+        snsService.sendSignal(signalPayload, form.getUserKind());
         return makeSuccessResponse("Send signal successfully");
     }
 }

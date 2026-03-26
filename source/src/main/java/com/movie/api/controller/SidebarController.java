@@ -7,6 +7,7 @@ import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.sidebar.SidebarDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
+import com.movie.api.form.ChangeActiveForm;
 import com.movie.api.form.UpdateOrderingForm;
 import com.movie.api.form.sidebar.CreateSidebarForm;
 import com.movie.api.form.sidebar.UpdateSidebarForm;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -176,5 +178,16 @@ public class SidebarController extends ABasicController {
         sidebarRepository.saveAll(sidebars);
 
         return makeSuccessResponse("Update ordering sidebar success");
+    }
+
+    @Transactional
+    @PutMapping(value = "/change-active", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('SDB_U')")
+    public ApiMessageDto<Void> changeActive(@Valid @RequestBody ChangeActiveForm form) {
+        Sidebar sidebar = sidebarRepository.findById(form.getId())
+                .orElseThrow(() -> new NotFoundException("[Sidebar] Not found", ErrorCode.SIDEBAR_ERROR_NOT_FOUND));
+        sidebar.setActive(form.getActive());
+        sidebarRepository.save(sidebar);
+        return makeSuccessResponse("Change active success");
     }
 }

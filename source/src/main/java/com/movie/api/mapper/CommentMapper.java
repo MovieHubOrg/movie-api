@@ -22,8 +22,8 @@ public interface CommentMapper {
     @Mapping(source = "totalDislike", target = "totalDislike")
     @Mapping(source = "totalChildren", target = "totalChildren")
     @Mapping(source = "isPinned", target = "isPinned")
-    @Mapping(source = "authorInfo", target = "authorInfo")
-    @Mapping(source = "replyToInfo", target = "replyToInfo")
+    @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountDto")
+    @Mapping(source = "replyTo", target = "replyTo", qualifiedByName = "entityToAccountDto")
     @Mapping(source = "status", target = "status")
     @Mapping(source = "modifiedDate", target = "modifiedDate")
     @Mapping(source = "createdDate", target = "createdDate")
@@ -35,7 +35,7 @@ public interface CommentMapper {
     List<CommentDto> fromEntityToCommentDtoList(List<Comment> comments);
 
     @Mapping(source = "id", target = "id")
-    @Mapping(source = "authorInfo", target = "authorInfo")
+    @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountDto")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToParentDto")
     CommentDto entityToParentDto(Comment comment);

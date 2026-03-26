@@ -21,4 +21,8 @@ public class SendSignalSnsForm {
     @NotBlank
     @ApiModelProperty(name = "payload", required = true)
     private String payload;
+
+    private Integer userKind;
+
+    private Long userId;
 }

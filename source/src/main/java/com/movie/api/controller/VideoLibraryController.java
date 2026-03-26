@@ -59,7 +59,7 @@ public class VideoLibraryController extends ABasicController {
     private RabbitService rabbitService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('VID_L_C')")
+//    @PreAuthorize("hasRole('VID_L_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateVideoLibraryForm form) {
         VideoLibrary videoLibrary = videoLibraryRepository.findFirstByName(form.getName()).orElse(null);
         if (videoLibrary != null) {

@@ -12,7 +12,11 @@ import lombok.Setter;
 public class AccountDto {
     @JsonSerialize(using = LongToStringIfWebSerializer.class)
     private Long id;
+    private String username;
+    private String email;
     private String fullName;
     private String avatarPath;
     private Integer kind;
+    private Integer gender;
+    private Boolean isVip;
 }

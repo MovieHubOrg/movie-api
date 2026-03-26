@@ -14,7 +14,7 @@ import java.util.List;
 public interface ReviewMapper {
 
     @Mapping(source = "id", target = "id")
-//    @Mapping(source = "author", target = "author", qualifiedByName = "entityToUserDto")
+    @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountDto")
     @Mapping(source = "movieId", target = "movieId")
     @Mapping(source = "rate", target = "rate")
     @Mapping(source = "content", target = "content")

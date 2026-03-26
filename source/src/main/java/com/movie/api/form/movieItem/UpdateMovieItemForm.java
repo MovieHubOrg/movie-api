@@ -48,7 +48,4 @@ public class UpdateMovieItemForm {
     @ApiModelProperty
     @Min(value = 1)
     private Integer totalEpisode;
-
-    @ApiModelProperty
-    private Boolean isLatest = false;
 }

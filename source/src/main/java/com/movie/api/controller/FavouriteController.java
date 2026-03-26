@@ -3,6 +3,7 @@ package com.movie.api.controller;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
+import com.movie.api.dto.ListIdDto;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.favourite.FavouriteDto;
 import com.movie.api.exception.BadRequestException;
@@ -10,8 +11,14 @@ import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.favourite.CreateFavouriteForm;
 import com.movie.api.mapper.FavouriteMapper;
 import com.movie.api.storage.criteria.FavouriteCriteria;
-import com.movie.api.storage.model.*;
-import com.movie.api.storage.repository.*;
+import com.movie.api.storage.model.Account;
+import com.movie.api.storage.model.Favourite;
+import com.movie.api.storage.model.Movie;
+import com.movie.api.storage.model.Person;
+import com.movie.api.storage.repository.AccountRepository;
+import com.movie.api.storage.repository.FavouriteRepository;
+import com.movie.api.storage.repository.MovieRepository;
+import com.movie.api.storage.repository.PersonRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -101,7 +108,7 @@ public class FavouriteController extends ABasicController {
     }
 
     @GetMapping(value = "/get-list-ids", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<Long>> getListId(@RequestParam("type") Integer type, @RequestParam(value = "movieId", required = false) Long movieId) {
+    public ApiMessageDto<ListIdDto> getListId(@RequestParam("type") Integer type, @RequestParam(value = "movieId", required = false) Long movieId) {
         List<Long> ids;
         Long userId = getCurrentUser();
         if (Objects.equals(type, BaseConstant.FAVOURITE_TYPE_MOVIE)) {
@@ -111,6 +118,6 @@ public class FavouriteController extends ABasicController {
         } else {
             throw new BadRequestException("Invalid type");
         }
-        return makeSuccessResponse(ids, "List favourite success");
+        return makeSuccessResponse(new ListIdDto(ids), "List favourite success");
     }
 }

@@ -43,8 +43,11 @@ public class RabbitMQListener {
                 signalPayload.setCmd(baseMessageForm.getCmd());
                 signalPayload.setData(baseMessageForm.getData());
 
-                // send sns
-                snsService.sendSignalForAllTenantApp(signalPayload);
+                // send notification for admin
+                snsService.sendSignal(signalPayload, BaseConstant.ACCOUNT_KIND_ADMIN);
+
+                // send notification for employee
+                snsService.sendSignal(signalPayload, BaseConstant.ACCOUNT_KIND_EMPLOYEE);
 
                 log.warn("==> DONE processing message");
             }

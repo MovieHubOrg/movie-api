@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class BaseSendSignalForm<T> {
-    private String app;
+    private Integer userKind;
     private Long userId;
     private T payload;
 }

@@ -59,7 +59,6 @@ public class ReviewController extends ABasicController {
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-//    @PreAuthorize("hasRole('REV_C')")
     public ApiMessageDto<ReviewDto> create(@Valid @RequestBody CreateReviewForm form) {
         Movie movie = movieRepository.findById(form.getMovieId())
                 .orElseThrow(() -> new BadRequestException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
