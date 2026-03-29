@@ -3,6 +3,7 @@ package com.movie.api.service.rabbit;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.dto.video.VideoLibraryDto;
 import com.movie.api.form.rabbit.BaseSendMsgForm;
 import com.movie.api.form.sns.BaseSendSignalPayloadForm;
 import com.movie.api.form.video.UpdateVideoForm;
@@ -37,11 +38,15 @@ public class RabbitMQListener {
             System.out.println("======> Received message from " + updateVideoQueue + ": " + message);
             if (baseMessageForm.getCmd().equals(BaseConstant.CMD_DONE_CONVERT_VIDEO)) {
                 log.warn("==> Processing update video");
-                videoService.updateVideoLibrary(baseMessageForm.getData());
+                VideoLibraryDto videoLibrary = videoService.updateVideoLibrary(baseMessageForm.getData());
+                if (videoLibrary == null) {
+                    log.warn("==> Video not found for ID: {}", baseMessageForm.getData().getId());
+                    return;
+                }
 
-                BaseSendSignalPayloadForm<UpdateVideoForm> signalPayload = new BaseSendSignalPayloadForm<>();
+                BaseSendSignalPayloadForm<VideoLibraryDto> signalPayload = new BaseSendSignalPayloadForm<>();
                 signalPayload.setCmd(baseMessageForm.getCmd());
-                signalPayload.setData(baseMessageForm.getData());
+                signalPayload.setData(videoLibrary);
 
                 // send notification for admin
                 snsService.sendSignal(signalPayload, BaseConstant.ACCOUNT_KIND_ADMIN);

@@ -54,6 +54,7 @@ public interface VideoLibraryMapper {
     @Mapping(source = "vttUrl", target = "vttUrl")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @Mapping(source = "duration", target = "duration")
+    @Mapping(source = "state", target = "state")
     @Mapping(source = "introStart", target = "introStart")
     @Mapping(source = "introEnd", target = "introEnd")
     @Mapping(source = "outroStart", target = "outroStart")

@@ -1,5 +1,6 @@
 package com.movie.api.service;
 
+import com.movie.api.dto.video.VideoLibraryDto;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.mapper.VideoLibraryMapper;
 import com.movie.api.storage.model.VideoLibrary;
@@ -17,14 +18,16 @@ public class VideoService {
     @Autowired
     private VideoLibraryMapper videoLibraryMapper;
 
-    public void updateVideoLibrary(UpdateVideoForm form) {
+    public VideoLibraryDto updateVideoLibrary(UpdateVideoForm form) {
         log.warn("Start updating video ID: {}", form.getId());
         log.warn(form.getContent());
         VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getId()).orElse(null);
         if (videoLibrary != null) {
             videoLibraryMapper.fromUpdateVideoFormToEntity(form, videoLibrary);
-            videoLibraryRepository.save(videoLibrary);
+            videoLibrary = videoLibraryRepository.save(videoLibrary);
+            return videoLibraryMapper.entityToVideoLibraryShortDto(videoLibrary);
         }
         log.warn("End updating video ID: {}", form.getId());
+        return null;
     }
 }
