@@ -129,7 +129,7 @@ public class MovieController extends ABasicController {
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<MovieDto> get(@PathVariable("id") Long id) {
-        // key -> {tenantId}::movie::{id}
+        // key -> {movie}::{id}
         String key = redisService.buildKey("movie", id.toString());
         MovieDto movieDto = redisService.get(key, MovieDto.class);
         if (movieDto != null) {
@@ -386,5 +386,23 @@ public class MovieController extends ABasicController {
         List<MovieItem> movieItems = movieItemRepository.findAll(criteria.getSpecification());
 
         return makeSuccessResponse(movieItemMapper.entityToMovieItemDtoWithMovieList(movieItems), "List schedule success");
+    }
+
+    @GetMapping(value = "/next-episode/{movieId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<MovieItemDto> getNextEpisode(@PathVariable Long movieId) {
+        Movie movie = movieRepository.findByIdAndStatus(movieId, BaseConstant.STATUS_ACTIVE)
+                .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        if (!Objects.equals(movie.getType(), BaseConstant.MOVIE_TYPE_SERIES)) {
+            return makeSuccessResponse(null, "Movie is not series");
+        }
+
+        MovieItem nextEpisode = movieItemRepository.findNextEpisode(
+                movieId,
+                BaseConstant.MOVIE_ITEM_KIND_EPISODE,
+                new Date(),
+                PageRequest.of(0, 1)
+        ).stream().findFirst().orElse(null);
+
+        return makeSuccessResponse(movieItemMapper.entityToMovieItemMetadataDto(nextEpisode), "Get next episode success");
     }
 }

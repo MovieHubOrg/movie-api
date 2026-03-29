@@ -1,6 +1,7 @@
 package com.movie.api.storage.repository;
 
 import com.movie.api.storage.model.MovieItem;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,4 +62,16 @@ public interface MovieItemRepository extends JpaRepository<MovieItem, Long>, Jpa
     @Transactional
     @Query("UPDATE FROM MovieItem mi SET mi.isLatest = false WHERE mi.movie.id = :movieId AND mi.kind = :kind AND mi.isLatest = true")
     void resetLatest(@Param("movieId") Long movieId, @Param("kind") Integer kind);
+
+    @Query("SELECT mi FROM MovieItem mi " +
+            "WHERE mi.movie.id = :movieId " +
+            "AND mi.kind = :kind " +
+            "AND mi.releaseDate > :now " +
+            "ORDER BY mi.releaseDate ASC ")
+    List<MovieItem> findNextEpisode(
+            @Param("movieId") Long movieId,
+            @Param("kind") Integer kind,
+            @Param("now") Date now,
+            Pageable pageable
+    );
 }
