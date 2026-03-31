@@ -58,6 +58,12 @@ public class BaseConstant {
     // CMD NOTIFICATION
     public static final String CMD_BROADCAST = "BROADCAST";
 
+    // Account Events
+    public static final String ACCOUNT_EVENT_CREATED = "ACCOUNT_CREATED";
+    public static final String ACCOUNT_EVENT_UPDATED = "ACCOUNT_UPDATED";
+    public static final String ACCOUNT_EVENT_DELETED = "ACCOUNT_DELETED";
+    public static final String ACCOUNT_EVENT_STATUS_CHANGED = "ACCOUNT_STATUS_CHANGED";
+
     public static final String APP_TENANT = "TENANT";
     public static final String APP_USER = "USER";
 

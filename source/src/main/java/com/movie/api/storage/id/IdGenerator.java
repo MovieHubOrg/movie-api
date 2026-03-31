@@ -1,6 +1,6 @@
 package com.movie.api.storage.id;
 
-import com.movie.api.storage.model.ReuseId;
+import com.movie.api.storage.base.Auditable;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
@@ -11,12 +11,12 @@ public class IdGenerator implements IdentifierGenerator {
 
     @Override
     public Serializable generate(SharedSessionContractImplementor sharedSessionContractImplementor, Object o) throws HibernateException {
-        try{
-            ReuseId reuseId = (ReuseId) o;
-            if (reuseId.getReusedId() != null) {
-                return reuseId.getReusedId();
+        try {
+            Auditable reuseId = (Auditable) o;
+            if (reuseId.getId() != null) {
+                return reuseId.getId();
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             //e.printStackTrace();
         }
         return SnowFlakeIdService.getInstance().nextId();

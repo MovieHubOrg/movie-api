@@ -215,12 +215,28 @@ public class MovieController extends ABasicController {
         return makeSuccessResponse(makeResponseListDto(movies, movieMapper::fromEntityToMovieAutoCompleteDtoList), "List movie success");
     }
 
+    @GetMapping(value = "/list-survey", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> listSurvey(MovieCriteria criteria, Pageable pageable) {
+        criteria.setIsFeatured(true);
+        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
+        Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
+
+        return makeSuccessResponse(movieMapper.fromEntityToMovieSurveyDtoList(movies.getContent()), "List survey movie success");
+    }
+
     @GetMapping(value = "/admin/list", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_L')")
     public ApiMessageDto<ResponseListDto<List<MovieDto>>> listForAdmin(MovieCriteria criteria, Pageable pageable) {
         Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
 
         return makeSuccessResponse(makeResponseListDto(movies, movieMapper::fromEntityToMovieAutoCompleteDtoList), "List movie success");
+    }
+
+    @GetMapping(value = "/auto-complete", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<ResponseListDto<List<MovieDto>>> autoComplete(MovieCriteria criteria, Pageable pageable) {
+        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
+        Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
+        return makeSuccessResponse(makeResponseListDto(movies, movieMapper::fromEntityToMovieAutoCompleteShortDtoList), "List movie success");
     }
 
     @PutMapping(value = "/update", produces = MediaType.APPLICATION_JSON_VALUE)
