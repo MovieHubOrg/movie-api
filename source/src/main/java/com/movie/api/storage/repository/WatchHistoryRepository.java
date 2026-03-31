@@ -1,6 +1,8 @@
 package com.movie.api.storage.repository;
 
+import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.model.WatchHistory;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -65,4 +67,21 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
     @Modifying
     @Query("update WatchHistory wh set wh.status = :statusDelete where wh.user.id = :userId and wh.movie.id = :movieId")
     void softDeleteByUserIdAndMovieId(@Param("statusDelete") Integer statusDelete, @Param("userId") Long userId, @Param("movieId") Long movieId);
+
+    @Query("SELECT wh FROM WatchHistory wh " +
+            "WHERE wh.user.id = :userId " +
+            "AND wh.movieItem IS NULL " +
+            "AND wh.isCompleted = true " +
+            "AND wh.status = 1 " +
+            "ORDER BY wh.modifiedDate DESC")
+    List<WatchHistory> findCompletedMoviesByUserOrderByDate(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
+    @Query("SELECT DISTINCT wh.movie.id FROM WatchHistory wh " +
+            "WHERE wh.user.id = :userId " +
+            "AND wh.movie IS NOT NULL " +
+            "AND wh.status = 1")
+    List<Long> findAllWatchedMovieIds(@Param("userId") Long userId);
 }

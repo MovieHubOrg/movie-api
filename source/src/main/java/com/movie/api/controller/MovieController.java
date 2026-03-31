@@ -5,6 +5,7 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
+import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.dto.watchHistory.WatchHistoryDto;
@@ -102,6 +103,9 @@ public class MovieController extends ABasicController {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
@@ -216,9 +220,10 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/list-survey", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<MovieDto>> listSurvey(MovieCriteria criteria, Pageable pageable) {
+    public ApiMessageDto<List<MovieDto>> listSurvey(MovieCriteria criteria) {
         criteria.setIsFeatured(true);
         criteria.setStatus(BaseConstant.STATUS_ACTIVE);
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdDate")));
         Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
 
         return makeSuccessResponse(movieMapper.fromEntityToMovieSurveyDtoList(movies.getContent()), "List survey movie success");
@@ -355,6 +360,46 @@ public class MovieController extends ABasicController {
                 movie.getType(),
                 PageRequest.of(0, 10));
         return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies), "List movie success");
+    }
+
+    /**
+     * Returns movies similar to a specific movie from the user's watch history.
+     *
+     * @param position Position in watch history (1 = most recent completed, 2 = second, etc.)
+     * @return List of recommended movies based on the selected reference movie
+     */
+    @GetMapping(value = "/suggest-by-watched", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "position") Integer position) {
+        // Validate position is within bounds
+        if (position < 1 || position > 3) {
+            return makeSuccessResponse(null, "Position must be between 1 and 3");
+        }
+
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        List<WatchHistory> completedMovies = watchHistoryRepository
+                .findCompletedMoviesByUserOrderByDate(user.getId(), PageRequest.of(0, position));
+
+        if (completedMovies.size() < position) {
+            return makeSuccessResponse(null, "Not enough watch history");
+        }
+
+        Movie referenceMovie = completedMovies.get(position - 1).getMovie();
+
+        List<Movie> suggestedMovies = movieRepository.findSuggestion(
+                referenceMovie.getId(),
+                referenceMovie.getCategories().stream().map(Category::getId).collect(Collectors.toList()),
+                referenceMovie.getCountry(),
+                referenceMovie.getLanguage(),
+                referenceMovie.getType(),
+                PageRequest.of(0, 10)
+        );
+
+        SuggestByWatchedDto result = new SuggestByWatchedDto();
+        result.setReferenceMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(referenceMovie));
+        result.setSuggestedMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(suggestedMovies));
+        return makeSuccessResponse(result, "Suggest by watched recommendations");
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)
