@@ -173,4 +173,12 @@ public class ErrorCode {
      */
     public static final String PLAYLIST_ERROR_NOT_FOUND = "ERROR-PLAYLIST-0000";
     public static final String PLAYLIST_ERROR_MAX_PER_USER = "ERROR-PLAYLIST-0001";
+
+    /**
+     * ServerConfig error code
+     */
+    public static final String SERVER_CONFIG_ERROR_NOT_FOUND = "ERROR-SERVER-CONFIG-0000";
+    public static final String SERVER_CONFIG_ERROR_SERVER_NUMBER_EXISTED = "ERROR-SERVER-CONFIG-0001";
+    public static final String SERVER_CONFIG_ERROR_HOSTNAME_EXISTED = "ERROR-SERVER-CONFIG-0002";
+    public static final String SERVER_CONFIG_ERROR_IP_PORT_EXISTED = "ERROR-SERVER-CONFIG-0003";
 }

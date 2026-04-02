@@ -82,7 +82,7 @@ public class ReviewController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('REV_C')")
+    @PreAuthorize("hasRole('REV_V')")
     public ApiMessageDto<ReviewDto> get(@PathVariable("id") Long id) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Review] Not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));

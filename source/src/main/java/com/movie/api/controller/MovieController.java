@@ -350,7 +350,7 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/suggestion/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<MovieDto>> suggestion(@PathVariable("id") Long id) {
+    public ApiMessageDto<List<MovieDto>> suggestion(@PathVariable Long id) {
         Movie movie = movieRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
         List<Movie> movies = movieRepository.findSuggestion(id,
