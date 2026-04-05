@@ -26,6 +26,7 @@ public interface VideoLibraryMapper {
     @Mapping(source = "outroStart", target = "outroStart")
     @Mapping(source = "duration", target = "duration")
     @Mapping(source = "state", target = "state")
+    @Mapping(source = "serverConfig.hostname", target = "hostname")
     @Mapping(source = "modifiedDate", target = "modifiedDate")
     @Mapping(source = "createdDate", target = "createdDate")
     @Mapping(source = "status", target = "status")
@@ -58,6 +59,7 @@ public interface VideoLibraryMapper {
     @Mapping(source = "introStart", target = "introStart")
     @Mapping(source = "introEnd", target = "introEnd")
     @Mapping(source = "outroStart", target = "outroStart")
+    @Mapping(source = "serverConfig.hostname", target = "hostname")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToVideoLibraryShortDto")
     VideoLibraryDto entityToVideoLibraryShortDto(VideoLibrary video);

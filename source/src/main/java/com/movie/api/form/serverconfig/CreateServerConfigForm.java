@@ -32,8 +32,4 @@ public class CreateServerConfigForm {
     @NotNull(message = "port cannot be null")
     @ApiModelProperty(required = true)
     private Integer port;
-
-    @StatusConstraint
-    @ApiModelProperty(required = true)
-    private Integer status;
 }

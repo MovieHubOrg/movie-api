@@ -19,6 +19,7 @@ public class VideoLibraryCriteria {
     private Integer status;
     private Integer state;
     private Integer sourceType;
+    private Long serverConfigId;
     private Long requiredId;
 
     public Specification<VideoLibrary> getSpecification() {
@@ -46,6 +47,10 @@ public class VideoLibraryCriteria {
 
                 if (getName() != null) {
                     predicates.add(cb.like(cb.lower(root.get("name")), "%" + getName().toLowerCase() + "%"));
+                }
+
+                if (getServerConfigId() != null) {
+                    predicates.add(cb.equal(root.get("serverConfig").get("id"), getServerConfigId()));
                 }
 
                 Predicate filters = cb.and(predicates.toArray(new Predicate[0]));

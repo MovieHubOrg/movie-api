@@ -17,4 +17,5 @@ public class UpdateVideoForm {
     private String vttUrl;
     private Integer state;
     private Long duration;
+    private Integer serverNumber;
 }

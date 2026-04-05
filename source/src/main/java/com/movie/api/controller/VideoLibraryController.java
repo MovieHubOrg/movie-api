@@ -52,8 +52,8 @@ public class VideoLibraryController extends ABasicController {
     @Value("${rabbitmq.convert.video.queue}")
     private String convertVideoQueue;
 
-    @Value("${rabbitmq.media.queue}")
-    private String mediaQueue;
+    @Value("${rabbitmq.streaming.queue}")
+    private String streamingQueue;
 
     @Autowired
     private RabbitService rabbitService;
@@ -151,12 +151,17 @@ public class VideoLibraryController extends ABasicController {
         // set video_id = null
         movieItemRepository.detachVideoFromMovieItem(videoLibrary.getId());
 
+        if (videoLibrary.getServerConfig() == null) {
+            throw new BadRequestException("Cannot delete video library because server config is null");
+        }
         // send message to delete video
         VideoLibraryDto data = new VideoLibraryDto();
         data.setId(id);
+
+        String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + streamingQueue;
         rabbitService.handleSendMsg(
                 appName,
-                mediaQueue,
+                queueName,
                 data,
                 BaseConstant.CMD_DELETE_VIDEO,
                 null,

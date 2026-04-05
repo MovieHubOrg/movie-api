@@ -112,7 +112,7 @@ public class MovieItemController extends ABasicController {
 
             if (form.getKind().equals(BaseConstant.MOVIE_ITEM_KIND_EPISODE)
                     && parent.getTotalEpisode() != null
-                    && parent.getTotalEpisode() < movieItemRepository.countCurrentTotalEpisodes(parent.getId())) {
+                    && parent.getTotalEpisode() <= movieItemRepository.countCurrentTotalEpisodes(parent.getId())) {
                 throw new BadRequestException("[Movie Item] Invalid total episode", ErrorCode.MOVIE_ITEM_ERROR_INVALID_TOTAL_EPISODES);
             }
             form.setTotalEpisode(null);

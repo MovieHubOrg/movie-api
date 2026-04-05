@@ -7,8 +7,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.Optional;
 
 public interface ServerConfigRepository extends JpaRepository<ServerConfig, Long>, JpaSpecificationExecutor<ServerConfig> {
-    Optional<ServerConfig> findByIdAndStatus(Long id, Integer status);
-
     boolean existsByServerNumber(Integer serverNumber);
 
     boolean existsByHostname(String hostname);
@@ -20,4 +18,6 @@ public interface ServerConfigRepository extends JpaRepository<ServerConfig, Long
     boolean existsByHostnameAndIdNot(String hostname, Long id);
 
     boolean existsByIpAndPortAndIdNot(String ip, Integer port, Long id);
+
+    Optional<ServerConfig> findByServerNumber(Integer serverNumber);
 }

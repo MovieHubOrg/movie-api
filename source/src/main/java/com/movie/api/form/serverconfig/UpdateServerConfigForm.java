@@ -17,10 +17,6 @@ public class UpdateServerConfigForm {
     @ApiModelProperty(required = true)
     private Long id;
 
-    @NotNull(message = "serverNumber cannot be null")
-    @ApiModelProperty(required = true)
-    private Integer serverNumber;
-
     @NotBlank(message = "name cannot be empty")
     @ApiModelProperty(required = true)
     private String name;

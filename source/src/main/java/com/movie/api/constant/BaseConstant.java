@@ -32,6 +32,7 @@ public class BaseConstant {
 
     public static final String HEADER_CLIENT_TYPE = "X-Client-Type";
     public static final String HEADER_CLIENT_TYPE_WEB = "WEB";
+    public static final String HEADER_X_API_KEY = "X-Api-Key";
 
     public static final String USERNAME_PATTERN = "^(?=.{3,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9_]*[a-zA-Z0-9]$";
     public static final String PHONE_PATTERN = "^0[35789][0-9]{8}$";
@@ -54,6 +55,7 @@ public class BaseConstant {
     public static final String CMD_DONE_CONVERT_VIDEO = "CMD_DONE_CONVERT_VIDEO";
     public static final String CMD_CONVERT_VIDEO = "CMD_CONVERT_VIDEO";
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
+    public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
 
     // CMD NOTIFICATION
     public static final String CMD_BROADCAST = "BROADCAST";

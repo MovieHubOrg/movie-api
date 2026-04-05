@@ -44,11 +44,9 @@ public interface ServerConfigMapper {
     @Mapping(source = "hostname", target = "hostname")
     @Mapping(source = "ip", target = "ip")
     @Mapping(source = "port", target = "port")
-    @Mapping(source = "status", target = "status")
     @BeanMapping(ignoreByDefault = true)
     ServerConfig fromCreateServerConfigFormToEntity(CreateServerConfigForm form);
 
-    @Mapping(source = "serverNumber", target = "serverNumber")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "hostname", target = "hostname")
     @Mapping(source = "ip", target = "ip")
