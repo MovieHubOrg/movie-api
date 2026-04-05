@@ -1,0 +1,40 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1775402793381-1">
+        <createTable tableName="db_user_movie">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_user_moviePK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="movie_id" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1775402793381-2">
+        <addColumn tableName="db_account">
+            <column name="is_make_survey" type="bit" afterColumn="is_vip"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1775402793381-3">
+        <addUniqueConstraint columnNames="user_id, movie_id" constraintName="uk_watch_history_user_movie" tableName="db_user_movie"/>
+    </changeSet>
+    <changeSet author="Movie" id="1775402793381-4">
+        <createIndex indexName="idx_user_movie_user_id" tableName="db_user_movie">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

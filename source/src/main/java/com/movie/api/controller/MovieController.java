@@ -5,12 +5,14 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
-import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movie.MovieDto;
+import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.dto.watchHistory.WatchHistoryDto;
+import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.movie.CreateMovieForm;
+import com.movie.api.form.movie.MakeSurveyForm;
 import com.movie.api.form.movie.MovieMetadataForm;
 import com.movie.api.form.movie.UpdateMovieForm;
 import com.movie.api.mapper.MovieItemMapper;
@@ -18,6 +20,8 @@ import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.WatchHistoryMapper;
 import com.movie.api.service.MediaService;
 import com.movie.api.service.MovieService;
+import com.movie.api.service.feign.FeignAccountAuthService;
+import com.movie.api.service.impl.UserServiceImpl;
 import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.MovieCriteria;
 import com.movie.api.storage.criteria.MovieItemCriteria;
@@ -34,6 +38,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -106,6 +111,15 @@ public class MovieController extends ABasicController {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private UserMovieRepository userMovieRepository;
+
+    @Autowired
+    private FeignAccountAuthService feignAccountAuthService;
+
+    @Autowired
+    private UserServiceImpl userService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
@@ -217,16 +231,6 @@ public class MovieController extends ABasicController {
         Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
 
         return makeSuccessResponse(makeResponseListDto(movies, movieMapper::fromEntityToMovieAutoCompleteDtoList), "List movie success");
-    }
-
-    @GetMapping(value = "/list-survey", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<MovieDto>> listSurvey(MovieCriteria criteria) {
-        criteria.setIsFeatured(true);
-        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
-        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdDate")));
-        Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
-
-        return makeSuccessResponse(movieMapper.fromEntityToMovieSurveyDtoList(movies.getContent()), "List survey movie success");
     }
 
     @GetMapping(value = "/admin/list", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -465,5 +469,60 @@ public class MovieController extends ABasicController {
         ).stream().findFirst().orElse(null);
 
         return makeSuccessResponse(movieItemMapper.entityToMovieItemMetadataDto(nextEpisode), "Get next episode success");
+    }
+
+    @GetMapping(value = "/list-survey", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> listSurvey(MovieCriteria criteria) {
+        criteria.setIsFeatured(true);
+        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdDate")));
+        Page<Movie> movies = movieRepository.findAll(criteria.getSpecification(), pageable);
+
+        return makeSuccessResponse(movieMapper.fromEntityToMovieSurveyDtoList(movies.getContent()), "List survey movie success");
+    }
+
+    @Transactional
+    @PostMapping(value = "/make-survey", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<Void> makeSurvey(@Valid @RequestBody MakeSurveyForm form) {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+        if (Boolean.TRUE.equals(user.getIsMakeSurvey())) {
+            return makeSuccessResponse("User has already made survey");
+        }
+
+        List<Movie> movies = movieRepository.findAllById(form.getMovieIds());
+        if (movies.size() < 3) {
+            throw new BadRequestException("[Survey] At least 3 valid movies are required", ErrorCode.SURVEY_ERROR_MIN_MOVIES);
+        }
+
+        List<UserMovie> existingUserMovies = userMovieRepository.findByUserId(user.getId());
+        Set<Long> existingMovieIds = existingUserMovies.stream()
+                .map(UserMovie::getMovieId)
+                .collect(Collectors.toSet());
+
+        List<UserMovie> newUserMovies = movies.stream()
+                .filter(movie -> !existingMovieIds.contains(movie.getId()))
+                .map(movie -> {
+                    UserMovie userMovie = new UserMovie();
+                    userMovie.setUserId(user.getId());
+                    userMovie.setMovieId(movie.getId());
+                    return userMovie;
+                })
+                .collect(Collectors.toList());
+
+        if (!newUserMovies.isEmpty()) {
+            userMovieRepository.saveAll(newUserMovies);
+        }
+
+        user.setIsMakeSurvey(true);
+        accountRepository.save(user);
+
+        // call service account to update make survey
+        try {
+            feignAccountAuthService.updateMakeSurvey(userService.getBearerTokenHeader());
+        } catch (Exception ex) {
+            throw new BadRequestException("Failed to update survey status in account service");
+        }
+        return makeSuccessResponse("Make survey success");
     }
 }

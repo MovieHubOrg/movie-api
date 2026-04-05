@@ -8,11 +8,6 @@ public class ErrorCode {
     /**
      * Starting error code Service Category
      */
-    public static final String DB_CONFIG_ERROR_NOT_FOUND = "ERROR-DB-CONFIG-ERROR-0000";
-
-    /**
-     * Starting error code Service Category
-     */
     public static final String CATEGORY_ERROR_NOT_FOUND = "ERROR-CATEGORY-ERROR-0000";
     public static final String CATEGORY_ERROR_NAME_EXISTED = "ERROR-CATEGORY-ERROR-0002";
     public static final String CATEGORY_ERROR_HAS_MOVIE = "ERROR-CATEGORY-ERROR-0003";
@@ -21,13 +16,11 @@ public class ErrorCode {
      * Starting error code Employee
      */
     public static final String ACCOUNT_ERROR_NOT_FOUND = "ERROR-ACCOUNT-ERROR-0000";
-    public static final String ACCOUNT_ERROR_USERNAME_EXISTED = "ERROR-ACCOUNT-ERROR-0002";
-    public static final String ACCOUNT_ERROR_PHONE_EXISTED = "ERROR-ACCOUNT-ERROR-0003";
-    public static final String ACCOUNT_ERROR_EMAIL_EXISTED = "ERROR-ACCOUNT-ERROR-0004";
-    public static final String ACCOUNT_ERROR_WRONG_PASSWORD = "ERROR-ACCOUNT-ERROR-0005";
-    public static final String ACCOUNT_ERROR_NEW_PASSWORD_SAME_OLD_PASSWORD = "ERROR-ACCOUNT-ERROR-0006";
-    public static final String ACCOUNT_ERROR_LOOKED = "ERROR-ACCOUNT-ERROR-0007";
-    public static final String ACCOUNT_ERROR_SOCIAL_LOGIN_FAIL = "ERROR-ACCOUNT-ERROR-0008";
+
+    /**
+     * Starting error code Survey
+     */
+    public static final String SURVEY_ERROR_MIN_MOVIES = "ERROR-SURVEY-ERROR-0000";
 
     /**
      * Starting error code Employee
