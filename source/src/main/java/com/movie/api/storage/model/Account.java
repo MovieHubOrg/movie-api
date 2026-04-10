@@ -38,4 +38,6 @@ public class Account extends Auditable<String> {
     private Integer gender;
 
     private Boolean isVip;
+
+    private Boolean isMakeSurvey = false;
 }

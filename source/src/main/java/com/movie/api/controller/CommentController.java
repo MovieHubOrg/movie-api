@@ -78,7 +78,7 @@ public class CommentController extends ABasicController {
 
         Comment comment = commentMapper.fromCreateCommentFormToEntity(form);
         comment.setAuthor(author);
-        comment.setAuthorInfo(objectMapper.writeValueAsString(accountMapper.entityToAuthorInfoDto(author)));
+        comment.setAuthorInfo(objectMapper.writeValueAsString(accountMapper.entityToAccountDto(author)));
 
         if (form.getMovieItemId() != null) {
             MovieItem movieItem = movieItemRepository.findById(form.getMovieItemId())
@@ -104,7 +104,7 @@ public class CommentController extends ABasicController {
                     .orElseThrow(() -> new NotFoundException("[Account] not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
             commentRepository.increaseTotalChild(parent.getId());
             comment.setReplyTo(replyTo);
-            comment.setReplyToInfo(objectMapper.writeValueAsString(accountMapper.entityToAuthorInfoDto(replyTo)));
+            comment.setReplyToInfo(objectMapper.writeValueAsString(accountMapper.entityToAccountDto(replyTo)));
             comment.setParent(parent);
         }
 

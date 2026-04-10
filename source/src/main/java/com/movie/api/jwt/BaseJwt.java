@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class BaseJwt implements Serializable {
 
-    public static final String DELIM = "\\|";
+    public static final String DELIM = "|";
     public static final String EMPTY_STRING = "<>";
     private Long tokenId;
 

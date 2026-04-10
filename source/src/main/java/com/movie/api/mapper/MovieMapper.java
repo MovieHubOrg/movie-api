@@ -89,6 +89,26 @@ public interface MovieMapper {
     @Named("entityToMovieShortDto")
     MovieDto entityToMovieShortDto(Movie movie);
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("fromEntityToMovieAutoCompleteShortDto")
+    MovieDto fromEntityToMovieAutoCompleteShortDto(Movie movie);
+
+    @IterableMapping(elementTargetType = MovieDto.class, qualifiedByName = "fromEntityToMovieAutoCompleteShortDto")
+    List<MovieDto> fromEntityToMovieAutoCompleteShortDtoList(List<Movie> movies);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
+    @Mapping(source = "posterUrl", target = "posterUrl")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToMovieSurveyDto")
+    MovieDto entityToMovieSurveyDto(Movie movie);
+
+    @IterableMapping(elementTargetType = MovieDto.class, qualifiedByName = "entityToMovieSurveyDto")
+    List<MovieDto> fromEntityToMovieSurveyDtoList(List<Movie> movies);
+
     @Mapping(source = "title", target = "title")
     @Mapping(source = "originalTitle", target = "originalTitle")
     @Mapping(source = "description", target = "description")

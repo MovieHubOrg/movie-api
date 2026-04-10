@@ -3,6 +3,7 @@ package com.movie.api.controller;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
+import com.movie.api.dto.ListIdDto;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.playlist.PlaylistDto;
@@ -113,8 +114,9 @@ public class PlaylistController extends ABasicController {
     }
 
     @GetMapping(value = "/list-by-movie/{movieId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<Long>> movies(@PathVariable("movieId") Long movieId) {
-        return makeSuccessResponse(playlistRepository.findByMovieIdAndUserId(movieId, getCurrentUser()), "List movie success");
+    public ApiMessageDto<ListIdDto> movies(@PathVariable("movieId") Long movieId) {
+        List<Long> ids = playlistRepository.findByMovieIdAndUserId(movieId, getCurrentUser());
+        return makeSuccessResponse(new ListIdDto(ids), "List movie success");
     }
 
     @PostMapping(value = "/update-item", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -1,6 +1,5 @@
-package com.movie.api.form.user;
+package com.movie.api.form;
 
-import com.movie.api.validation.StatusConstraint;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
@@ -11,12 +10,13 @@ import javax.validation.constraints.NotNull;
 @Getter
 @Setter
 @ApiModel
-public class UpdateUserForm {
+public class ChangeActiveForm {
     @NotNull(message = "id cannot be null")
     @ApiModelProperty(required = true)
     private Long id;
 
-    @StatusConstraint
-    @ApiModelProperty(name = "status", required = true)
-    private Integer status;
+    @NotNull(message = "active cannot be null")
+    @ApiModelProperty(name = "active", required = true)
+    private Boolean active;
+
 }

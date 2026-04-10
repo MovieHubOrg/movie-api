@@ -82,6 +82,13 @@ public class CategoryController extends ABasicController {
         return makeSuccessResponse(makeResponseListDto(categories, categoryMapper::fromEntityToCategoryDtoList), "List category success");
     }
 
+    @GetMapping(value = "/auto-complete", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<ResponseListDto<List<CategoryDto>>> autoComplete(CategoryCriteria criteria, Pageable pageable) {
+        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
+        Page<Category> categories = categoryRepository.findAll(criteria.getSpecification(), pageable);
+        return makeSuccessResponse(makeResponseListDto(categories, categoryMapper::fromEntityToCategoryAutoCompleteDtoList), "List category success");
+    }
+
     @PutMapping(value = "/update", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CA_U')")
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateCategoryForm form) {

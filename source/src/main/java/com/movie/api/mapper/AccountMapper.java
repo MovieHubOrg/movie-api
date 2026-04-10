@@ -10,19 +10,14 @@ import org.mapstruct.*;
 public interface AccountMapper {
 
     @Mapping(source = "id", target = "id")
+    @Mapping(source = "username", target = "username")
+    @Mapping(source = "email", target = "email")
     @Mapping(source = "fullName", target = "fullName")
     @Mapping(source = "avatarPath", target = "avatarPath")
     @Mapping(source = "kind", target = "kind")
+    @Mapping(source = "gender", target = "gender")
+    @Mapping(source = "isVip", target = "isVip")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToAccountDto")
     AccountDto entityToAccountDto(Account account);
-
-    @Mapping(source = "id", target = "id")
-    @Mapping(source = "email", target = "email")
-    @Mapping(source = "fullName", target = "fullName")
-    @Mapping(source = "kind", target = "kind")
-    @Mapping(source = "avatarPath", target = "avatarPath")
-    @BeanMapping(ignoreByDefault = true)
-    @Named("entityToAccountDto")
-    AuthorInfoDto entityToAuthorInfoDto(Account account);
 }

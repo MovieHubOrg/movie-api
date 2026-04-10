@@ -10,4 +10,6 @@ public interface VideoLibraryRepository extends JpaRepository<VideoLibrary, Long
     Optional<VideoLibrary> findFirstByName(String name);
 
     boolean existsByName(String name);
+
+    boolean existsByServerConfigId(Long serverConfigId);
 }

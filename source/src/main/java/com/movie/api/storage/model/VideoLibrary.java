@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name = DatabaseConstant.PREFIX_TABLE + "video_library")
@@ -52,4 +49,8 @@ public class VideoLibrary extends Auditable<String> {
     private Long outroStart;
 
     private Integer state; // 0: PROCESSING, 1: READY
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "server_config_id")
+    private ServerConfig serverConfig;
 }

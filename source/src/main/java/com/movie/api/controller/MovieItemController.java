@@ -112,7 +112,7 @@ public class MovieItemController extends ABasicController {
 
             if (form.getKind().equals(BaseConstant.MOVIE_ITEM_KIND_EPISODE)
                     && parent.getTotalEpisode() != null
-                    && parent.getTotalEpisode() < movieItemRepository.countCurrentTotalEpisodes(parent.getId())) {
+                    && parent.getTotalEpisode() <= movieItemRepository.countCurrentTotalEpisodes(parent.getId())) {
                 throw new BadRequestException("[Movie Item] Invalid total episode", ErrorCode.MOVIE_ITEM_ERROR_INVALID_TOTAL_EPISODES);
             }
             form.setTotalEpisode(null);
@@ -208,7 +208,6 @@ public class MovieItemController extends ABasicController {
         movieItemMapper.fromUpdateMovieItemFormToEntity(form, movieItem);
         movieItem.setVideo(video);
         movieItemRepository.save(movieItem);
-        handleUpdateLatestMovieItem(movieItem, form.getIsLatest());
         redisService.delete(redisService.buildKey("movie", movieItem.getMovie().getId().toString()));
         return makeSuccessResponse("Update movie item success");
     }
@@ -280,6 +279,22 @@ public class MovieItemController extends ABasicController {
         return makeSuccessResponse("Update movie item success");
     }
 
+    @PutMapping(value = "/mark-latest/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('MOV_I_U')")
+    public ApiMessageDto<Void> markLatest(@PathVariable Long id) {
+        MovieItem movieItem = movieItemRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("[Movie Item] Not found", ErrorCode.MOVIE_ITEM_ERROR_NOT_FOUND));
+        if (Boolean.TRUE.equals(movieItem.getIsLatest())) {
+            return makeSuccessResponse("Movie item is already marked as latest");
+        }
+        Movie movie = movieItem.getMovie();
+        if (Objects.equals(movie.getType(), BaseConstant.MOVIE_TYPE_SERIES) && Objects.equals(movieItem.getKind(), BaseConstant.MOVIE_ITEM_KIND_SEASON)) {
+            throw new BadRequestException("Cannot mark episode latest for series movie", ErrorCode.MOVIE_ITEM_ERROR_INVALID_REQUEST);
+        }
+        handleUpdateLatestMovieItem(movieItem, true);
+        redisService.delete(redisService.buildKey("movie", movieItem.getMovie().getId().toString()));
+        return makeSuccessResponse("Mark latest movie item success");
+    }
 
     // check label existed by kind not trailer
     private void checkLabel(Integer kind, String label, Long movieId, Long parentId) {

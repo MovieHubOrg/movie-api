@@ -59,7 +59,6 @@ public class ReviewController extends ABasicController {
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-//    @PreAuthorize("hasRole('REV_C')")
     public ApiMessageDto<ReviewDto> create(@Valid @RequestBody CreateReviewForm form) {
         Movie movie = movieRepository.findById(form.getMovieId())
                 .orElseThrow(() -> new BadRequestException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
@@ -83,7 +82,7 @@ public class ReviewController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('REV_C')")
+    @PreAuthorize("hasRole('REV_V')")
     public ApiMessageDto<ReviewDto> get(@PathVariable("id") Long id) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Review] Not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));

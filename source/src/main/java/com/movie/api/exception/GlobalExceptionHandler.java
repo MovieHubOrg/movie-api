@@ -86,6 +86,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiMessageDto<String>> notAllow(UnauthorizationException ex) {
         ApiMessageDto<String> apiMessageDto = new ApiMessageDto<>();
         apiMessageDto.setResult(false);
+        apiMessageDto.setCode(ex.getCode() != null ? ex.getCode() : "ERROR");
         apiMessageDto.setMessage(ex.getMessage());
         return new ResponseEntity<>(apiMessageDto, HttpStatus.FORBIDDEN);
     }

@@ -32,6 +32,7 @@ public class BaseConstant {
 
     public static final String HEADER_CLIENT_TYPE = "X-Client-Type";
     public static final String HEADER_CLIENT_TYPE_WEB = "WEB";
+    public static final String HEADER_X_API_KEY = "X-Api-Key";
 
     public static final String USERNAME_PATTERN = "^(?=.{3,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9_]*[a-zA-Z0-9]$";
     public static final String PHONE_PATTERN = "^0[35789][0-9]{8}$";
@@ -54,12 +55,19 @@ public class BaseConstant {
     public static final String CMD_DONE_CONVERT_VIDEO = "CMD_DONE_CONVERT_VIDEO";
     public static final String CMD_CONVERT_VIDEO = "CMD_CONVERT_VIDEO";
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
+    public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
 
     // CMD NOTIFICATION
     public static final String CMD_BROADCAST = "BROADCAST";
 
-    public static final String APP_TENANT = "TENANT";
-    public static final String APP_USER = "USER";
+    // Account Events
+    public static final String ACCOUNT_EVENT_CREATED = "ACCOUNT_CREATED";
+    public static final String ACCOUNT_EVENT_UPDATED = "ACCOUNT_UPDATED";
+    public static final String ACCOUNT_EVENT_DELETED = "ACCOUNT_DELETED";
+    public static final String ACCOUNT_EVENT_STATUS_CHANGED = "ACCOUNT_STATUS_CHANGED";
+
+    public static final String APP_CMS = "cms";
+    public static final String APP_MOVIE = "movie";
 
     public static final Boolean SIDEBAR_ACTIVE_TRUE = true;
     public static final boolean SIDEBAR_ACTIVE_FALSE = false;
@@ -87,6 +95,14 @@ public class BaseConstant {
     public static final Integer ACTION_ADD = 1;
 
     public static final Integer MAX_PLAYLIST_PER_USER = 5;
+
+    public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
+    public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
+
+    public static final int MQTT_QOS_LEVEL_0 = 0; // Fire and forget
+    public static final int MQTT_QOS_LEVEL_1 = 1; // At least once
+    public static final int MQTT_QOS_LEVEL_2 = 2; // Exactly once
+
     private BaseConstant(){
         throw new IllegalStateException("Utility class");
     }

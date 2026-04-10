@@ -3,6 +3,7 @@ package com.movie.api.dto.comment;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.movie.api.dto.ABasicAdminDto;
 import com.movie.api.dto.LongToStringIfWebSerializer;
+import com.movie.api.dto.account.AccountDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;
@@ -21,10 +22,6 @@ public class CommentDto extends ABasicAdminDto {
     private Integer totalChildren;
     private Boolean isPinned;
     private CommentDto parent;
-    @JsonSerialize(using = LongToStringIfWebSerializer.class)
-    private Long authorId;
-    private String authorInfo;
-    @JsonSerialize(using = LongToStringIfWebSerializer.class)
-    private Long replyToId;
-    private String replyToInfo;
+    private AccountDto author;
+    private AccountDto replyTo;
 }

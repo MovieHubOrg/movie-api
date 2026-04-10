@@ -23,6 +23,7 @@ public class SecurityConstant {
             "/v1/movie/list",
             "/v1/movie/suggestion/**",
             "/v1/movie/top-views/**",
+            "/v1/movie/next-episode/**",
             "/v1/movie/schedule",
             "/v1/movie-item/get/**",
             "/v1/movie-item/list",
@@ -39,7 +40,10 @@ public class SecurityConstant {
             "/v1/collection/get/**",
             "/v1/collection/list",
             "/v1/collection/topics",
-            "/v1/collection-item/list"
+            "/v1/collection-item/list",
+
+            // Internal APIs
+            "/v1/server-config/internal/**"
     );
 
     private SecurityConstant() {
