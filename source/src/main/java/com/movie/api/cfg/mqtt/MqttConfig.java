@@ -53,8 +53,6 @@ public class MqttConfig {
     }
 
     // ===== SUBSCRIBER =====
-
-    // PARTNER_IN_CHANNEL
     @Bean
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
