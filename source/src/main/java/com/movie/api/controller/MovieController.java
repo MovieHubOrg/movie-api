@@ -15,6 +15,7 @@ import com.movie.api.form.movie.CreateMovieForm;
 import com.movie.api.form.movie.MakeSurveyForm;
 import com.movie.api.form.movie.MovieMetadataForm;
 import com.movie.api.form.movie.UpdateMovieForm;
+import com.movie.api.form.user.UpdateMakeSurveyForm;
 import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.WatchHistoryMapper;
@@ -32,6 +33,7 @@ import com.movie.api.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +42,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
 import java.util.*;
@@ -120,6 +123,9 @@ public class MovieController extends ABasicController {
 
     @Autowired
     private UserServiceImpl userService;
+
+    @Value("${auth.internal.api.key}")
+    private String authInternalApiKey;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
@@ -515,15 +521,34 @@ public class MovieController extends ABasicController {
             userMovieRepository.saveAll(newUserMovies);
         }
 
-        user.setIsMakeSurvey(true);
+        updateMakeSurveyStatus(user, true);
+        return makeSuccessResponse("Make survey success");
+    }
+
+    @ApiIgnore
+    @Transactional
+    @PostMapping(value = "/reset-survey/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<Void> resetSurvey(@PathVariable Long userId) {
+        Account user = accountRepository.findByIdAndStatusAndKind(userId, BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        userMovieRepository.deleteByUserIdAndType(user.getId(), BaseConstant.USER_MOVIE_TYPE_INTERESTED);
+        updateMakeSurveyStatus(user, false);
+        return makeSuccessResponse("Reset survey success");
+    }
+
+    private void updateMakeSurveyStatus(Account user, boolean isMakeSurvey) {
+        user.setIsMakeSurvey(isMakeSurvey);
         accountRepository.save(user);
 
-        // call service account to update make survey
+        UpdateMakeSurveyForm form = new UpdateMakeSurveyForm();
+        form.setUserId(user.getId());
+        form.setIsMakeSurvey(isMakeSurvey);
+
         try {
-            feignAccountAuthService.updateMakeSurvey(userService.getBearerTokenHeader());
+            feignAccountAuthService.updateMakeSurvey(authInternalApiKey, form);
         } catch (Exception ex) {
-            throw new BadRequestException("Failed to update survey status in account service");
+            throw new BadRequestException("Failed to update survey status in account service" + ex.getMessage());
         }
-        return makeSuccessResponse("Make survey success");
     }
 }
