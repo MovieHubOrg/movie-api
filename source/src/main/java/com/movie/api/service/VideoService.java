@@ -1,5 +1,6 @@
 package com.movie.api.service;
 
+import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.video.VideoLibraryDto;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.mapper.VideoLibraryMapper;
@@ -23,7 +24,10 @@ public class VideoService {
     @Autowired
     private ServerConfigRepository serverConfigRepository;
 
-    public VideoLibraryDto updateVideoLibrary(UpdateVideoForm form) {
+    @Autowired
+    private NotificationService notificationService;
+
+    public void updateVideoLibrary(UpdateVideoForm form) {
         log.warn("Start updating video ID: {}", form.getId());
         log.warn(form.getContent());
         log.warn("Server number: {}", form.getServerNumber());
@@ -31,17 +35,20 @@ public class VideoService {
         ServerConfig serverConfig = serverConfigRepository.findByServerNumber(form.getServerNumber()).orElse(null);
         if (serverConfig == null) {
             log.warn("Server config not found for server number: {}", form.getServerNumber());
-            return null;
+            return;
         }
 
         VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getId()).orElse(null);
-        if (videoLibrary != null) {
-            videoLibraryMapper.fromUpdateVideoFormToEntity(form, videoLibrary);
-            videoLibrary.setServerConfig(serverConfig);
-            videoLibrary = videoLibraryRepository.save(videoLibrary);
-            return videoLibraryMapper.entityToVideoLibraryShortDto(videoLibrary);
+        if (videoLibrary == null) {
+            log.warn("Video library not found for ID: {}", form.getId());
+            return;
         }
+        videoLibraryMapper.fromUpdateVideoFormToEntity(form, videoLibrary);
+        videoLibrary.setServerConfig(serverConfig);
+        videoLibrary = videoLibraryRepository.save(videoLibrary);
         log.warn("End updating video ID: {}", form.getId());
-        return null;
+
+        VideoLibraryDto data = videoLibraryMapper.entityToVideoLibraryShortDto(videoLibrary);
+        notificationService.sendToApp(BaseConstant.APP_CMS, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.MQTT_QOS_LEVEL_0);
     }
 }

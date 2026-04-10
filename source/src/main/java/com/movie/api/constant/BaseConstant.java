@@ -66,8 +66,8 @@ public class BaseConstant {
     public static final String ACCOUNT_EVENT_DELETED = "ACCOUNT_DELETED";
     public static final String ACCOUNT_EVENT_STATUS_CHANGED = "ACCOUNT_STATUS_CHANGED";
 
-    public static final String APP_TENANT = "TENANT";
-    public static final String APP_USER = "USER";
+    public static final String APP_CMS = "cms";
+    public static final String APP_MOVIE = "movie";
 
     public static final Boolean SIDEBAR_ACTIVE_TRUE = true;
     public static final boolean SIDEBAR_ACTIVE_FALSE = false;
@@ -98,6 +98,10 @@ public class BaseConstant {
 
     public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
     public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
+
+    public static final int MQTT_QOS_LEVEL_0 = 0; // Fire and forget
+    public static final int MQTT_QOS_LEVEL_1 = 1; // At least once
+    public static final int MQTT_QOS_LEVEL_2 = 2; // Exactly once
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");
