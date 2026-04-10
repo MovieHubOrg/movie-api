@@ -17,6 +17,11 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
     @Query("DELETE FROM UserMovie um WHERE um.userId = :userId")
     void deleteByUserId(@Param("userId") Long userId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
+    void deleteByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
+
     List<UserMovie> findByUserId(Long userId);
 
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);

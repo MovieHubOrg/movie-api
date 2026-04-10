@@ -177,7 +177,7 @@ public class ServerConfigController extends ABasicController {
     @GetMapping(value = "/internal/get-by-server-number/{serverNumber}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<ServerConfigDto> getByServerNumber(
             @PathVariable Integer serverNumber,
-            @RequestHeader(value = BaseConstant.HEADER_X_API_KEY, required = false) String apiKey) {
+            @RequestHeader(value = BaseConstant.HEADER_X_API_KEY) String apiKey) {
         if (StringUtils.isBlank(apiKey) || !apiKey.equals(serverInternalPassword)) {
             throw new UnauthorizationException("[ServerConfig] Unauthorized", ErrorCode.SERVER_CONFIG_ERROR_UNAUTHORIZED);
         }

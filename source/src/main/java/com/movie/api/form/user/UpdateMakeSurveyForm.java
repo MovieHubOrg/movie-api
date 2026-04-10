@@ -1,22 +1,21 @@
 package com.movie.api.form.user;
 
-import com.movie.api.validation.EmailConstraint;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Getter
 @Setter
 @ApiModel
-public class VerifyOtpForm {
-    @EmailConstraint
+public class UpdateMakeSurveyForm {
+    @NotNull
     @ApiModelProperty(required = true)
-    private String email;
+    private Long userId;
 
-    @NotBlank
+    @NotNull
     @ApiModelProperty(required = true)
-    private String otp;
+    private Boolean isMakeSurvey;
 }
