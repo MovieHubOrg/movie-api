@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, JpaSpecificationExecutor<UserMovie> {
     @Modifying
@@ -17,4 +18,8 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
     void deleteByUserId(@Param("userId") Long userId);
 
     List<UserMovie> findByUserId(Long userId);
+
+    boolean existsByUserIdAndMovieId(Long userId, Long movieId);
+
+    Optional<UserMovie> findByUserIdAndMovieId(Long userId, Long movieId);
 }

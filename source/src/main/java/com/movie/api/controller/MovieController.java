@@ -506,6 +506,7 @@ public class MovieController extends ABasicController {
                     UserMovie userMovie = new UserMovie();
                     userMovie.setUserId(user.getId());
                     userMovie.setMovieId(movie.getId());
+                    userMovie.setType(BaseConstant.USER_MOVIE_TYPE_INTERESTED);
                     return userMovie;
                 })
                 .collect(Collectors.toList());

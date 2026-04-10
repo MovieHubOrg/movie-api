@@ -95,6 +95,10 @@ public class BaseConstant {
     public static final Integer ACTION_ADD = 1;
 
     public static final Integer MAX_PLAYLIST_PER_USER = 5;
+
+    public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
+    public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
+
     private BaseConstant(){
         throw new IllegalStateException("Utility class");
     }

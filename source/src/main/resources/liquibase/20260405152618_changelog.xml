@@ -37,4 +37,9 @@
             <column name="user_id"/>
         </createIndex>
     </changeSet>
+    <changeSet author="Movie" id="1775402793381-5">
+        <addColumn tableName="db_user_movie">
+            <column name="type" type="integer" afterColumn="movie_id"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

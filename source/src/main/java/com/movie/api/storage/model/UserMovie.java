@@ -28,4 +28,7 @@ public class UserMovie extends Auditable<String> {
 
     @Column(name = "movie_id")
     private Long movieId;
+
+    @Column(name = "type")
+    private Integer type;
 }

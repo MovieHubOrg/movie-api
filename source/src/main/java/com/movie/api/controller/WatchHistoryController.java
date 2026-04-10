@@ -9,12 +9,10 @@ import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.watchHistory.TrackingWatchHistoryForm;
 import com.movie.api.mapper.WatchHistoryMapper;
 import com.movie.api.storage.criteria.WatchHistoryCriteria;
-import com.movie.api.storage.model.Account;
-import com.movie.api.storage.model.Movie;
-import com.movie.api.storage.model.MovieItem;
-import com.movie.api.storage.model.WatchHistory;
+import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.AccountRepository;
 import com.movie.api.storage.repository.MovieItemRepository;
+import com.movie.api.storage.repository.UserMovieRepository;
 import com.movie.api.storage.repository.WatchHistoryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +32,8 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @Slf4j
 public class WatchHistoryController extends ABasicController {
+    private static final long REWIND_SECONDS = 15L;
+
     @Autowired
     private WatchHistoryRepository watchHistoryRepository;
 
@@ -45,6 +45,9 @@ public class WatchHistoryController extends ABasicController {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private UserMovieRepository userMovieRepository;
 
     @PostMapping(value = "/tracking", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> tracking(@Valid @RequestBody TrackingWatchHistoryForm form) {
@@ -71,13 +74,13 @@ public class WatchHistoryController extends ABasicController {
                 ? movieItem.getVideo().getOutroStart()
                 : movieItem.getVideo().getDuration();
 
-        watchHistory.setLastWatchSeconds(form.getLastWatchSeconds());
-        // watch again
+        Long adjustedWatchSeconds = Math.max(0L, form.getLastWatchSeconds() - REWIND_SECONDS);
+        watchHistory.setLastWatchSeconds(adjustedWatchSeconds);
         if (watchHistory.getIsCompleted()) {
-            if (watchHistory.getLastWatchSeconds() < endOfVideo) {
+            if (form.getLastWatchSeconds() < endOfVideo) {
                 watchHistory.setIsCompleted(false);
             }
-        } else if (watchHistory.getLastWatchSeconds() >= endOfVideo) { // completed watch
+        } else if (form.getLastWatchSeconds() >= endOfVideo) { // completed watch
             watchHistory.setIsCompleted(true);
             watchHistory.setTimesWatched(watchHistory.getTimesWatched() + 1);
         }
@@ -94,6 +97,7 @@ public class WatchHistoryController extends ABasicController {
         boolean isCompletedMovie = checkCompletedMovie(movieWatchHistory);
         if (isCompletedMovie && !movieWatchHistory.getIsCompleted()) {
             movieWatchHistory.setTimesWatched(movieWatchHistory.getTimesWatched() + 1);
+            saveUserMovieIfNotExist(user.getId(), movieItem.getMovie().getId());
         }
         movieWatchHistory.setIsCompleted(isCompletedMovie);
         watchHistoryRepository.save(movieWatchHistory);
@@ -148,5 +152,18 @@ public class WatchHistoryController extends ABasicController {
         Long targetTotal = movieItemRepository.countByMovieIdAndKind(movie.getId(), kind);
         Long totalCompleted = watchHistoryRepository.countCompletedWatchHistory(movie.getId(), user.getId(), BaseConstant.STATUS_ACTIVE);
         return Objects.equals(totalCompleted, targetTotal);
+    }
+
+    private void saveUserMovieIfNotExist(Long userId, Long movieId) {
+        UserMovie userMovie = userMovieRepository.findByUserIdAndMovieId(userId, movieId).orElse(null);
+        if (userMovie == null) {
+            userMovie = new UserMovie();
+            userMovie.setUserId(userId);
+            userMovie.setMovieId(movieId);
+        }
+        if (userMovie.getType() == null || !Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_WATCHED)) {
+            userMovie.setType(BaseConstant.USER_MOVIE_TYPE_WATCHED);
+            userMovieRepository.save(userMovie);
+        }
     }
 }
