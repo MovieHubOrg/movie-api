@@ -29,6 +29,9 @@ public class MqttConfig {
     @Value("${mqtt.password}")
     private String password;
 
+    @Value("${mqtt.client.id}")
+    private String clientId;
+
     @Value("${mqtt.topic.notification.in}")
     private String notificationTopicIn;
 
@@ -62,7 +65,7 @@ public class MqttConfig {
     public MessageProducer inbound() {
         MqttPahoMessageDrivenChannelAdapter adapter =
                 new MqttPahoMessageDrivenChannelAdapter(
-                        "moviehub_backend_in",
+                        clientId + "in",
                         mqttClientFactory(),
                         notificationTopicIn
                 );
@@ -99,7 +102,7 @@ public class MqttConfig {
     @Bean
     @ServiceActivator(inputChannel = "mqttOutboundChannel")
     public MessageHandler mqttOutbound() {
-        MqttPahoMessageHandler handler = new MqttPahoMessageHandler("moviehub_backend_out", mqttClientFactory());
+        MqttPahoMessageHandler handler = new MqttPahoMessageHandler(clientId + "out", mqttClientFactory());
         handler.setAsync(true);
         handler.setDefaultTopic(notificationTopicOut);
         handler.setDefaultQos(0);
