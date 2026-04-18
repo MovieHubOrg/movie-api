@@ -56,9 +56,14 @@ public class BaseConstant {
     public static final String CMD_CONVERT_VIDEO = "CMD_CONVERT_VIDEO";
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
+    public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
 
-    // CMD NOTIFICATION
-    public static final String CMD_BROADCAST = "BROADCAST";
+    public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;
+    public static final Integer NOTIFICATION_TARGET_TYPE_ACCOUNT = 2;
+
+    public static final Integer NOTIFICATION_TYPE_CMS = 1;
+    public static final Integer NOTIFICATION_TYPE_MOVIE = 2;
+    public static final Integer NOTIFICATION_TYPE_COMMUNITY = 3;
 
     // Account Events
     public static final String ACCOUNT_EVENT_CREATED = "ACCOUNT_CREATED";

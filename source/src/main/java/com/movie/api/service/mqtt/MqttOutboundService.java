@@ -29,6 +29,7 @@ public class MqttOutboundService {
     }
 
     public <T> void sendToClient(String topic, String cmd, T data, int qos) {
+        log.warn("==> Sending MQTT message to topic {} with cmd {}", topic, cmd);
         BaseSendMsgForm<T> form = new BaseSendMsgForm<>();
         form.setCmd(cmd);
         form.setData(data);

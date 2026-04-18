@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 @Service
 @Slf4j
 public class VideoService {
@@ -50,5 +52,6 @@ public class VideoService {
 
         VideoLibraryDto data = videoLibraryMapper.entityToVideoLibraryShortDto(videoLibrary);
         notificationService.sendToApp(BaseConstant.APP_CMS, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.MQTT_QOS_LEVEL_0);
+        notificationService.createNotificationTemplate("Xử lý video hoàn tất", data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS, new Date());
     }
 }

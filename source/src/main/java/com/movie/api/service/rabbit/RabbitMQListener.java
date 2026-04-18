@@ -1,12 +1,16 @@
 package com.movie.api.service.rabbit;
 
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.form.notification.SendNotificationForm;
 import com.movie.api.form.rabbit.BaseSendMsgForm;
 import com.movie.api.form.user.AccountEventForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.service.AccountSyncService;
+import com.movie.api.service.NotificationService;
 import com.movie.api.service.VideoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -26,6 +30,9 @@ public class RabbitMQListener {
     @Autowired
     private VideoService videoService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Value("${rabbitmq.account.queue.movie}")
     private String accountMovieQueue;
 
@@ -35,14 +42,19 @@ public class RabbitMQListener {
     @RabbitListener(queues = "${rabbitmq.update.video.queue}")
     public void receiveMessage(String message) {
         try {
-            BaseSendMsgForm<UpdateVideoForm> baseMessageForm = objectMapper.readValue(message, new TypeReference<>() {
+            BaseSendMsgForm<JsonNode> baseMessageForm = objectMapper.readValue(message, new TypeReference<>() {
             });
             System.out.println("======> Received message from " + updateVideoQueue + ": " + message);
             if (baseMessageForm.getCmd().equals(BaseConstant.CMD_DONE_CONVERT_VIDEO)) {
                 log.warn("==> Processing update video");
-                videoService.updateVideoLibrary(baseMessageForm.getData());
-                log.warn("==> DONE processing message");
+                UpdateVideoForm updateVideoForm = objectMapper.treeToValue(baseMessageForm.getData(), UpdateVideoForm.class);
+                videoService.updateVideoLibrary(updateVideoForm);
+            } else if (baseMessageForm.getCmd().equals(BaseConstant.CMD_SEND_NOTIFICATION)) {
+                log.warn("==> Processing send notification");
+                SendNotificationForm sendNotificationForm = objectMapper.treeToValue(baseMessageForm.getData(), SendNotificationForm.class);
+                notificationService.sendNotification(sendNotificationForm);
             }
+            log.warn("==> DONE processing message");
         } catch (Exception e) {
             log.error("Error processing received message: {}", e.getMessage(), e);
         }
