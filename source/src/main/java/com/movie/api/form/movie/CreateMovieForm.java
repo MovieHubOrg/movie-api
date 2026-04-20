@@ -1,5 +1,6 @@
 package com.movie.api.form.movie;
 
+import com.movie.api.form.notification.SendNotificationConfigForm;
 import com.movie.api.validation.AgeRatingConstraint;
 import com.movie.api.validation.MovieTypeConstraint;
 import com.movie.api.validation.StatusConstraint;
@@ -8,6 +9,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
@@ -67,4 +69,9 @@ public class CreateMovieForm {
     @StatusConstraint
     @ApiModelProperty(required = true)
     private Integer status;
+
+    @Valid
+    @NotNull(message = "sendNotificationConfig cannot be null")
+    @ApiModelProperty(required = true)
+    private SendNotificationConfigForm sendNotificationConfig;
 }

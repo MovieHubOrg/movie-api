@@ -16,6 +16,7 @@ import com.movie.api.form.movie.CreateMovieForm;
 import com.movie.api.form.movie.MakeSurveyForm;
 import com.movie.api.form.movie.MovieMetadataForm;
 import com.movie.api.form.movie.UpdateMovieForm;
+import com.movie.api.form.notification.SendNotificationConfigForm;
 import com.movie.api.form.user.UpdateMakeSurveyForm;
 import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
@@ -142,10 +143,17 @@ public class MovieController extends ABasicController {
         movie.setSlug(StringUtils.slugify(form.getTitle()));
         movieRepository.save(movie);
 
-        MovieNotificationDto data = movieMapper.entityToMovieNotificationDto(movie);
-        String title = String.format("Phim \"%s\" vừa được thêm mới", movie.getTitle());
-        notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_MOVIE, new Date());
-
+        if (Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
+            MovieNotificationDto data = movieMapper.entityToMovieNotificationDto(movie);
+            SendNotificationConfigForm sendNotificationConfig = form.getSendNotificationConfig();
+            String title = !StringUtils.isNullOrEmpty(sendNotificationConfig.getTitle())
+                    ? sendNotificationConfig.getTitle()
+                    : String.format("Phim \"%s\" vừa được ra mắt!", movie.getTitle());
+            Date scheduleAt = sendNotificationConfig.getScheduleAt().before(movie.getReleaseDate())
+                    ? sendNotificationConfig.getScheduleAt()
+                    : movie.getReleaseDate();
+            notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_MOVIE, scheduleAt);
+        }
         return makeSuccessResponse("Create movie success");
     }
 
