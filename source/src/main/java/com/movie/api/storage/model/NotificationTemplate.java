@@ -20,8 +20,10 @@ import java.util.Date;
 public class NotificationTemplate extends Auditable<String> {
     private String title;
 
+    private String cmd;
+
     @Column(columnDefinition = "LONGTEXT")
-    private String body;
+    private String body; // internal data
 
     private Integer type;
 

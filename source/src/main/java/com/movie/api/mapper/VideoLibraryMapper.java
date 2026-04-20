@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.video.VideoLibraryDto;
+import com.movie.api.dto.video.VideoLibraryNotificationDto;
 import com.movie.api.form.video.CreateVideoLibraryForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.form.video.UpdateVideoLibraryForm;
@@ -66,6 +67,14 @@ public interface VideoLibraryMapper {
 
     @IterableMapping(elementTargetType = VideoLibraryDto.class, qualifiedByName = "entityToVideoLibraryShortDto")
     List<VideoLibraryDto> fromEntityToVideoLibraryShortDtoList(List<VideoLibrary> videoLibraries);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "name", target = "name")
+    @Mapping(source = "duration", target = "duration")
+    @Mapping(source = "state", target = "state")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToVideoLibraryDtoNotification")
+    VideoLibraryNotificationDto entityToVideoLibraryDtoNotification(VideoLibrary video);
 
     @Mapping(source = "name", target = "name")
     @Mapping(source = "description", target = "description")

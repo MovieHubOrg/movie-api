@@ -58,4 +58,14 @@
     <changeSet author="Movie" id="1776500415417-3">
         <addForeignKeyConstraint baseColumnNames="account_id" baseTableName="db_notification" constraintName="FKjnfpglyuau8td5kvetrv2blvs" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account" validate="true"/>
     </changeSet>
+    <changeSet author="Movie" id="1776500415417-4">
+        <addColumn tableName="db_notification">
+            <column name="cmd" type="varchar(255)" afterColumn="title"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1776500415417-5">
+        <addColumn tableName="db_notification_template">
+            <column name="cmd" type="varchar(255)" afterColumn="title"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

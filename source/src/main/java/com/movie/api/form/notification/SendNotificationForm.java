@@ -9,9 +9,13 @@ import java.util.List;
 @Setter
 public class SendNotificationForm {
     private String title;
+    private String cmd;
     private String body;
     private Integer type;
     private Integer targetType;
     private String targetValue;
     private List<Long> accountIds;
+
+    private String message;
+    private String imageUrl;
 }

@@ -4,9 +4,15 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.notification.NotificationDto;
+import com.movie.api.dto.oneSignal.AdditionalData;
+import com.movie.api.dto.oneSignal.Content;
+import com.movie.api.dto.oneSignal.IncludeAliases;
+import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
+import com.movie.api.form.notification.TestSendOneSignalForm;
 import com.movie.api.form.notification.UpdateReadNotificationForm;
 import com.movie.api.form.notification.TestSendNotificationForm;
 import com.movie.api.mapper.NotificationMapper;
+import com.movie.api.service.CommonAsyncService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.NotificationCriteria;
 import com.movie.api.storage.model.Notification;
@@ -20,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -39,10 +46,40 @@ public class NotificationController extends ABasicController {
     @Autowired
     private NotificationMapper notificationMapper;
 
+    @Autowired
+    private CommonAsyncService commonAsyncService;
+
+    @ApiIgnore
     @PostMapping(value = "/send-notification", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> send(@Valid @RequestBody TestSendNotificationForm form) {
-        notificationService.createNotificationTemplate(form.getTitle(), form.getBody(), form.getType(), form.getTargetType(), form.getTargetValue(), form.getScheduleAt());
-        return makeSuccessResponse("Create style success");
+        notificationService.createNotificationTemplate(form.getTitle(), form.getCmd(), form.getBody(), form.getType(), form.getTargetType(), form.getTargetValue(), form.getScheduleAt());
+        return makeSuccessResponse("Test send notification success");
+    }
+
+    @ApiIgnore
+    @PostMapping(value = "/send-one-signal", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<Void> sendOneSignal(@Valid @RequestBody TestSendOneSignalForm form) {
+        OneSignalPushNotificationForm oneSignalForm = new OneSignalPushNotificationForm();
+
+        Content headings = new Content();
+        headings.setEn(form.getTitle());
+        oneSignalForm.setHeadings(headings);
+
+        Content contents = new Content();
+        contents.setEn(form.getBody());
+        oneSignalForm.setContents(contents);
+
+        IncludeAliases includeAliases = new IncludeAliases();
+        includeAliases.setExternalId(form.getAccountIds());
+        oneSignalForm.setIncludeAliases(includeAliases);
+
+        AdditionalData<String> additionalData = new AdditionalData<>();
+        additionalData.setData(form.getData());
+        oneSignalForm.setData(additionalData);
+
+        oneSignalForm.setBigPicture(form.getBigPicture());
+        commonAsyncService.postMessageToOneSignal(oneSignalForm);
+        return makeSuccessResponse("Send OneSignal notification success");
     }
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)

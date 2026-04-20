@@ -1,26 +1,36 @@
 package com.movie.api.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
+import com.movie.api.service.feign.FeignOneSignalService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
+import java.io.IOException;
 
 @Service
 @Slf4j
 public class CommonAsyncService {
-
     @Autowired
     private EmailService emailService;
 
     @Autowired
-    RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private FeignOneSignalService feignOneSignalService;
+
+    @Value("${onesignal.mobile.app-id}")
+    private String oneSignalAppId;
+
+    @Value("${onesignal.mobile.api-key}")
+    private String oneSignalApiKey;
 
     @Autowired
     @Qualifier("threadPoolExecutor")
@@ -41,38 +51,20 @@ public class CommonAsyncService {
     }
 
     @Async
-    public void pushToFirebase(String url, String data, HttpMethod httpMethod) {
-        System.out.println("firebase url push: " + url);
+    public void postMessageToOneSignal(OneSignalPushNotificationForm oneSignalPushNotification) {
         Runnable task3 = () -> {
             try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-                headers.setContentType(MediaType.APPLICATION_JSON);
+                oneSignalPushNotification.setAppId(oneSignalAppId);
+                oneSignalPushNotification.setTargetChannel("push");
+                log.warn("Send notify body: {}", objectMapper.writeValueAsString(oneSignalPushNotification));
 
-                HttpEntity<String> entity = new HttpEntity<>(data, headers);
-                ResponseEntity<String> response = restTemplate.exchange(url, httpMethod, entity, String.class);
-                log.info("callFirebase>>Result - status (" + response.getStatusCode() + ") has body: " + response.hasBody());
-            } catch (Exception ex) {
-                log.error("callFirebase>>error: " + ex.getMessage(), ex);
-            }
-        };
-        taskExecutor.execute(task3);
-    }
-
-    @Async
-    public void deleteFirebasePath(String url) {
-        System.out.println("firebase url delete: " + url);
-        Runnable task3 = () -> {
-            try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-                headers.setContentType(MediaType.APPLICATION_JSON);
-
-                HttpEntity<String> entity = new HttpEntity<>(headers);
-                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
-                log.info("callFirebase>>Result - status (" + response.getStatusCode() + ") has body: " + response.hasBody());
-            } catch (Exception ex) {
-                log.error("callFirebase>>error: " + ex.getMessage(), ex);
+                feignOneSignalService.sendNotification(
+                        "Key " + oneSignalApiKey,
+                        oneSignalPushNotification
+                );
+                log.warn("Send notification success");
+            } catch (IOException t) {
+                log.error(t.getMessage(), t);
             }
         };
         taskExecutor.execute(task3);

@@ -9,7 +9,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
 public class JSONUtils {
-
     //public static
     public static <T> T getDataObject(String json, String field, Class<T> returnType) throws Exception {
         ObjectMapper mapper = getMapper();

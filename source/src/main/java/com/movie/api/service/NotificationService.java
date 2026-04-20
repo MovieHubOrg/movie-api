@@ -3,7 +3,14 @@ package com.movie.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.dto.comment.CommentNotificationDto;
+import com.movie.api.dto.movie.MovieDto;
+import com.movie.api.dto.movie.MovieNotificationDto;
 import com.movie.api.dto.notification.NotificationDto;
+import com.movie.api.dto.oneSignal.AdditionalData;
+import com.movie.api.dto.oneSignal.Content;
+import com.movie.api.dto.oneSignal.IncludeAliases;
+import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
 import com.movie.api.form.notification.SendNotificationForm;
 import com.movie.api.service.mqtt.MqttOutboundService;
 import com.movie.api.service.rabbit.RabbitService;
@@ -13,6 +20,7 @@ import com.movie.api.storage.model.NotificationTemplate;
 import com.movie.api.storage.repository.AccountRepository;
 import com.movie.api.storage.repository.NotificationRepository;
 import com.movie.api.storage.repository.NotificationTemplateRepository;
+import com.movie.api.utils.JSONUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,14 +60,18 @@ public class NotificationService {
     @Autowired
     private RabbitService rabbitService;
 
+    @Autowired
+    private CommonAsyncService commonAsyncService;
+
     public <T> void sendToApp(String app, String cmd, T data, Integer qos) {
         String topic = notificationTopicOut + "/" + app;
         mqttOutboundService.sendToClient(topic, cmd, data, qos);
     }
 
-    public <T> NotificationTemplate createNotificationTemplate(String title, T body, Integer type, Integer targetType, String targetValue, Date scheduleAt) {
+    public <T> void createNotificationTemplate(String title, String cmd, T body, Integer type, Integer targetType, String targetValue, Date scheduleAt) {
         NotificationTemplate notificationTemplate = new NotificationTemplate();
         notificationTemplate.setTitle(title);
+        notificationTemplate.setCmd(cmd);
         try {
             notificationTemplate.setBody(body != null ? objectMapper.writeValueAsString(body) : null);
         } catch (JsonProcessingException e) {
@@ -70,7 +82,7 @@ public class NotificationService {
         notificationTemplate.setTargetValue(targetValue);
         notificationTemplate.setScheduleAt(scheduleAt);
         notificationTemplate.setStatus(BaseConstant.STATUS_PENDING);
-        return notificationTemplateRepository.save(notificationTemplate);
+        notificationTemplateRepository.save(notificationTemplate);
     }
 
     @Transactional
@@ -99,12 +111,31 @@ public class NotificationService {
 
             SendNotificationForm sendNotificationForm = new SendNotificationForm();
             sendNotificationForm.setTitle(template.getTitle());
+            sendNotificationForm.setCmd(template.getCmd());
             sendNotificationForm.setBody(template.getBody());
             sendNotificationForm.setType(template.getType());
             sendNotificationForm.setTargetType(template.getTargetType());
             sendNotificationForm.setTargetValue(template.getTargetValue());
             if (Objects.equals(template.getTargetType(), BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT)) {
                 sendNotificationForm.setAccountIds(accounts.stream().map(Account::getId).collect(Collectors.toList()));
+            }
+
+            if (Objects.equals(template.getCmd(), BaseConstant.CMD_NEW_MOVIE)) {
+                try {
+                    MovieNotificationDto movie = objectMapper.readValue(template.getBody(), MovieNotificationDto.class);
+                    sendNotificationForm.setMessage(String.format("\"%s\" đã lên sóng - Xem ngay kẻo lỡ!", movie.getTitle()));
+                    sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + movie.getThumbnailUrl());
+                } catch (Exception e) {
+                    log.warn("Failed to parse movie data for notification message: {}", e.getMessage());
+                }
+            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_REPLY_COMMENT)) {
+                try {
+                    CommentNotificationDto comment = objectMapper.readValue(template.getBody(), CommentNotificationDto.class);
+                    String message = String.format("%s đã trả lời bình luận của bạn: %s", comment.getAuthor().getFullName(), comment.getContent());
+                    sendNotificationForm.setMessage(message);
+                } catch (Exception e) {
+                    log.warn("Failed to parse comment data for notification message: {}", e.getMessage());
+                }
             }
 
             rabbitService.handleSendMsg(
@@ -124,6 +155,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setAccount(account);
         notification.setTitle(template.getTitle());
+        notification.setCmd(template.getCmd());
         notification.setBody(template.getBody());
         notification.setType(template.getType());
         return notification;
@@ -171,6 +203,7 @@ public class NotificationService {
     public void sendNotification(SendNotificationForm form) {
         NotificationDto notificationDto = new NotificationDto();
         notificationDto.setTitle(form.getTitle());
+        notificationDto.setCmd(form.getCmd());
         notificationDto.setBody(form.getBody());
         notificationDto.setType(form.getType());
         if (Objects.equals(form.getTargetType(), BaseConstant.NOTIFICATION_TARGET_TYPE_APP)) {
@@ -196,6 +229,43 @@ public class NotificationService {
         } else {
             log.warn("Unsupported targetType {} for sending notification", form.getTargetType());
         }
+
+        if (BaseConstant.ONE_SIGNAL_ALLOWED_CMD.contains(form.getCmd())) {
+            sendOneSignalNotification(form);
+        }
+
+    }
+
+    private void sendOneSignalNotification(SendNotificationForm form) {
+        List<Long> accountIds = form.getAccountIds();
+        if (accountIds == null || accountIds.isEmpty()) {
+            log.warn("No accountIds provided for sending OneSignal notification");
+            return;
+        }
+
+        List<String> externalIds = accountIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.toList());
+
+        OneSignalPushNotificationForm oneSignalForm = new OneSignalPushNotificationForm();
+        Content headings = new Content();
+        headings.setEn(form.getTitle());
+        oneSignalForm.setHeadings(headings);
+
+        Content contents = new Content();
+        contents.setEn(form.getMessage());
+        oneSignalForm.setContents(contents);
+
+        IncludeAliases includeAliases = new IncludeAliases();
+        includeAliases.setExternalId(externalIds);
+        oneSignalForm.setIncludeAliases(includeAliases);
+
+        AdditionalData<String> additionalData = new AdditionalData<>();
+        additionalData.setData(form.getBody());
+        oneSignalForm.setData(additionalData);
+
+        oneSignalForm.setBigPicture(form.getImageUrl());
+        commonAsyncService.postMessageToOneSignal(oneSignalForm);
     }
 
     private String resolveTargetApp(String targetValue) {

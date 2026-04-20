@@ -10,6 +10,7 @@ import java.util.List;
 @Setter
 public class TestSendNotificationForm {
     private String title;
+    private String cmd;
     private String body;
     private Integer type;
     private Integer targetType;

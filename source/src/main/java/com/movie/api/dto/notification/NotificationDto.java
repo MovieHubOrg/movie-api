@@ -10,6 +10,7 @@ import lombok.Setter;
 @ApiModel
 public class NotificationDto extends ABasicAdminDto {
     private String title;
+    private String cmd;
     private String body;
     private Integer type;
     private Boolean isRead = false;

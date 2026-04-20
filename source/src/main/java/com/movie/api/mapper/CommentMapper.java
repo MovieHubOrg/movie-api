@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.comment.CommentDto;
+import com.movie.api.dto.comment.CommentNotificationDto;
 import com.movie.api.form.comment.CreateCommentForm;
 import com.movie.api.form.comment.UpdateCommentForm;
 import com.movie.api.storage.model.Comment;
@@ -39,6 +40,16 @@ public interface CommentMapper {
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToParentDto")
     CommentDto entityToParentDto(Comment comment);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "movieItem.id", target = "movieItemId")
+    @Mapping(source = "movieId", target = "movieId")
+    @Mapping(source = "parent.id", target = "parentId")
+    @Mapping(source = "content", target = "content")
+    @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountNotificationDto")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToCommentNotificationDto")
+    CommentNotificationDto entityToCommentNotificationDto(Comment comment);
 
     @Mapping(source = "content", target = "content")
     @BeanMapping(ignoreByDefault = true)

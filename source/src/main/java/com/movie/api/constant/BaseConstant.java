@@ -1,5 +1,7 @@
 package com.movie.api.constant;
 
+import java.util.Set;
+
 public class BaseConstant {
     public static final Integer ACCOUNT_KIND_ADMIN = 1;
     public static final Integer ACCOUNT_KIND_EMPLOYEE = 2;
@@ -34,6 +36,8 @@ public class BaseConstant {
     public static final String HEADER_CLIENT_TYPE_WEB = "WEB";
     public static final String HEADER_X_API_KEY = "X-Api-Key";
 
+    public static final String DOWNLOAD_MEDIA_API = "https://media-api.moviehub.biz/v1/file/download";
+
     public static final String USERNAME_PATTERN = "^(?=.{3,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9_]*[a-zA-Z0-9]$";
     public static final String PHONE_PATTERN = "^0[35789][0-9]{8}$";
     public static final String EMAIL_PATTERN = "^(?!.*[.]{2,})[a-zA-Z0-9.%]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
@@ -57,6 +61,13 @@ public class BaseConstant {
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
+    public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
+    public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
+
+    public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
+            BaseConstant.CMD_NEW_MOVIE,
+            BaseConstant.CMD_REPLY_COMMENT
+    );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;
     public static final Integer NOTIFICATION_TARGET_TYPE_ACCOUNT = 2;
