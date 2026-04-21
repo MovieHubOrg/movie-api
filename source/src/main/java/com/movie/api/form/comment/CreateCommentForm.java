@@ -25,8 +25,6 @@ public class CreateCommentForm {
 
     private Long replyToId;
 
-    private Integer replyToKind;
-
     @AssertTrue(message = "At least one of movieId or movieItemId must be provided.")
     public boolean isValidTarget() {
         return movieId != null || movieItemId != null;

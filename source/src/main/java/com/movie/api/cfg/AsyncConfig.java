@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 
-
 @Configuration
 @Slf4j
 public class AsyncConfig implements AsyncConfigurer {

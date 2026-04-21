@@ -1,0 +1,71 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1776500415417-1">
+        <createTable tableName="db_notification">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_notificationPK"/>
+            </column>
+            <column name="account_id" type="BIGINT"/>
+            <column name="title" type="VARCHAR(255)"/>
+            <column name="body" type="LONGTEXT"/>
+            <column name="type" type="INT"/>
+            <column name="is_read" type="BIT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1776500415417-2">
+        <createTable tableName="db_notification_template">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_notification_templatePK"/>
+            </column>
+            <column name="title" type="VARCHAR(255)"/>
+            <column name="body" type="LONGTEXT"/>
+            <column name="type" type="INT"/>
+            <column name="target_type" type="INT"/>
+            <column name="target_value" type="LONGTEXT"/>
+            <column name="schedule_at" type="datetime"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1776500415417-3">
+        <addForeignKeyConstraint baseColumnNames="account_id" baseTableName="db_notification" constraintName="FKjnfpglyuau8td5kvetrv2blvs" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1776500415417-4">
+        <addColumn tableName="db_notification">
+            <column name="cmd" type="varchar(255)" afterColumn="title"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1776500415417-5">
+        <addColumn tableName="db_notification_template">
+            <column name="cmd" type="varchar(255)" afterColumn="title"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

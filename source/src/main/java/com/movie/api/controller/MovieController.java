@@ -6,6 +6,7 @@ import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.movie.MovieDto;
+import com.movie.api.dto.movie.MovieNotificationDto;
 import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.dto.watchHistory.WatchHistoryDto;
@@ -15,12 +16,14 @@ import com.movie.api.form.movie.CreateMovieForm;
 import com.movie.api.form.movie.MakeSurveyForm;
 import com.movie.api.form.movie.MovieMetadataForm;
 import com.movie.api.form.movie.UpdateMovieForm;
+import com.movie.api.form.notification.SendNotificationConfigForm;
 import com.movie.api.form.user.UpdateMakeSurveyForm;
 import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.WatchHistoryMapper;
 import com.movie.api.service.MediaService;
 import com.movie.api.service.MovieService;
+import com.movie.api.service.NotificationService;
 import com.movie.api.service.feign.FeignAccountAuthService;
 import com.movie.api.service.impl.UserServiceImpl;
 import com.movie.api.service.redis.RedisService;
@@ -121,11 +124,11 @@ public class MovieController extends ABasicController {
     @Autowired
     private FeignAccountAuthService feignAccountAuthService;
 
-    @Autowired
-    private UserServiceImpl userService;
-
     @Value("${auth.internal.api.key}")
     private String authInternalApiKey;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
@@ -139,6 +142,18 @@ public class MovieController extends ABasicController {
 
         movie.setSlug(StringUtils.slugify(form.getTitle()));
         movieRepository.save(movie);
+
+        if (Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
+            MovieNotificationDto data = movieMapper.entityToMovieNotificationDto(movie);
+            SendNotificationConfigForm sendNotificationConfig = form.getSendNotificationConfig();
+            String title = !StringUtils.isNullOrEmpty(sendNotificationConfig.getTitle())
+                    ? sendNotificationConfig.getTitle()
+                    : String.format("Phim \"%s\" vừa được ra mắt!", movie.getTitle());
+            Date scheduleAt = sendNotificationConfig.getScheduleAt().before(movie.getReleaseDate())
+                    ? sendNotificationConfig.getScheduleAt()
+                    : movie.getReleaseDate();
+            notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_MOVIE, scheduleAt);
+        }
         return makeSuccessResponse("Create movie success");
     }
 

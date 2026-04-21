@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.movie.MovieDto;
+import com.movie.api.dto.movie.MovieNotificationDto;
 import com.movie.api.form.movie.CreateMovieForm;
 import com.movie.api.form.movie.FilterMovieForm;
 import com.movie.api.form.movie.UpdateMovieForm;
@@ -108,6 +109,17 @@ public interface MovieMapper {
 
     @IterableMapping(elementTargetType = MovieDto.class, qualifiedByName = "entityToMovieSurveyDto")
     List<MovieDto> fromEntityToMovieSurveyDtoList(List<Movie> movies);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "originalTitle", target = "originalTitle")
+    @Mapping(source = "slug", target = "slug")
+    @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
+    @Mapping(source = "posterUrl", target = "posterUrl")
+    @Mapping(source = "releaseDate", target = "releaseDate")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToMovieNotificationDto")
+    MovieNotificationDto entityToMovieNotificationDto(Movie movie);
 
     @Mapping(source = "title", target = "title")
     @Mapping(source = "originalTitle", target = "originalTitle")

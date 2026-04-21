@@ -7,6 +7,7 @@ import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.comment.CommentDto;
+import com.movie.api.dto.comment.CommentNotificationDto;
 import com.movie.api.dto.reaction.VoteDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
@@ -19,6 +20,7 @@ import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.CommentMapper;
 import com.movie.api.service.MovieService;
+import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.CommentCriteria;
 import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.*;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -69,6 +72,9 @@ public class CommentController extends ABasicController {
     @Autowired
     private MovieService movieService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CMT_C')")
@@ -92,7 +98,7 @@ public class CommentController extends ABasicController {
         }
 
         if (form.getParentId() != null) {
-            if (form.getReplyToId() == null || form.getReplyToKind() == null) {
+            if (form.getReplyToId() == null) {
                 throw new BadRequestException("[Comment] reply invalid", ErrorCode.COMMENT_ERROR_REPLY_INVALID);
             }
             Comment parent = commentRepository.findById(form.getParentId())
@@ -110,7 +116,24 @@ public class CommentController extends ABasicController {
 
         commentRepository.save(comment);
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
+        if (comment.getReplyTo() != null) {
+            createReplyNotificationTemplate(comment, author, comment.getReplyTo());
+        }
         return makeSuccessResponse(commentMapper.entityToCommentDto(comment), "Create comment success");
+    }
+
+    private void createReplyNotificationTemplate(Comment comment, Account author, Account replyTo) {
+        CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
+        String title = String.format("%s đã trả lời bình luận của bạn", author.getFullName());
+        notificationService.createNotificationTemplate(
+                title,
+                BaseConstant.CMD_REPLY_COMMENT,
+                data,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                String.valueOf(replyTo.getId()),
+                new Date()
+        );
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
