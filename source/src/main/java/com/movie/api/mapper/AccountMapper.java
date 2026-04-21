@@ -2,7 +2,6 @@ package com.movie.api.mapper;
 
 import com.movie.api.dto.account.AccountDto;
 import com.movie.api.dto.account.AccountNotificationDto;
-import com.movie.api.dto.comment.AuthorInfoDto;
 import com.movie.api.storage.model.Account;
 import org.mapstruct.*;
 
