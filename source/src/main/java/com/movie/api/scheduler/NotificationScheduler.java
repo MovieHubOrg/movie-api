@@ -12,10 +12,17 @@ public class NotificationScheduler {
     @Autowired
     private NotificationService notificationService;
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedDelay = 60000) // 1 minute
     public void processNotificationTemplate() {
         log.info("======> Start scheduler processNotificationTemplate");
         notificationService.processScheduledNotificationTemplates();
         log.info("======> End scheduler processNotificationTemplate");
+    }
+
+    @Scheduled(fixedDelay = 300000) // 5 minutes
+    public void deleteActiveNotificationTemplates() {
+        log.info("======> Start scheduler deleteActiveNotificationTemplates");
+        notificationService.deleteActiveNotificationTemplates();
+        log.info("======> End scheduler deleteActiveNotificationTemplates");
     }
 }

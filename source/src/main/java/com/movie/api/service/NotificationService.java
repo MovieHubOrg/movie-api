@@ -151,6 +151,10 @@ public class NotificationService {
         notificationTemplateRepository.saveAll(templates);
     }
 
+    public void deleteActiveNotificationTemplates() {
+        notificationTemplateRepository.deleteByStatus(BaseConstant.STATUS_ACTIVE);
+    }
+
     private Notification buildNotification(NotificationTemplate template, Account account) {
         Notification notification = new Notification();
         notification.setAccount(account);
@@ -261,6 +265,9 @@ public class NotificationService {
         oneSignalForm.setIncludeAliases(includeAliases);
 
         AdditionalData<String> additionalData = new AdditionalData<>();
+        additionalData.setTitle(form.getTitle());
+        additionalData.setContent(form.getMessage());
+        additionalData.setCmd(form.getCmd());
         additionalData.setData(form.getBody());
         oneSignalForm.setData(additionalData);
 
