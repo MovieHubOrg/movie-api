@@ -1,5 +1,6 @@
 package com.movie.api.form.notification;
 
+import com.movie.api.form.movie.CreateMovieForm;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,7 +12,7 @@ import java.util.List;
 public class TestSendNotificationForm {
     private String title;
     private String cmd;
-    private String body;
+    private CreateMovieForm movie;
     private Integer type;
     private Integer targetType;
     private String targetValue;
