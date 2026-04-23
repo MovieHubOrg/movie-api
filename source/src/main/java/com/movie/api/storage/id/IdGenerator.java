@@ -21,4 +21,8 @@ public class IdGenerator implements IdentifierGenerator {
         }
         return SnowFlakeIdService.getInstance().nextId();
     }
+
+    public Long nextId(){
+        return SnowFlakeIdService.getInstance().nextId();
+    }
 }
