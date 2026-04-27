@@ -43,7 +43,8 @@ public class SecurityConstant {
             "/v1/collection-item/list",
 
             // Internal APIs
-            "/v1/server-config/internal/**"
+            "/v1/server-config/internal/**",
+            "/v1/room/internal/**"
     );
 
     private SecurityConstant() {

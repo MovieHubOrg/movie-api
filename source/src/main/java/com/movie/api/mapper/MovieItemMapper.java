@@ -122,6 +122,17 @@ public interface MovieItemMapper {
     @Named("entityToMovieItemMetadataDto")
     MovieItemDto entityToMovieItemMetadataDto(MovieItem movieItem);
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "kind", target = "kind")
+    @Mapping(source = "label", target = "label")
+    @Mapping(source = "movie", target = "movie", qualifiedByName = "entityToMovieRoomDto")
+    @Mapping(source = "video", target = "video", qualifiedByName = "entityToVideoLibraryShortDto")
+    @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToMovieItemRoomDto")
+    MovieItemDto entityToMovieItemRoomDto(MovieItem movieItem);
+
     @Mapping(source = "title", target = "title")
     @Mapping(source = "description", target = "description")
     @Mapping(source = "kind", target = "kind")

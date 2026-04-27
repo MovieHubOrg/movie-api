@@ -1,13 +1,14 @@
 package com.movie.api.cfg.mqtt;
 
+import com.movie.api.service.RoomService;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
-import org.springframework.integration.core.MessageProducer;
 import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
 import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
 import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
@@ -38,6 +39,12 @@ public class MqttConfig {
     @Value("${mqtt.topic.notification.out}")
     private String notificationTopicOut;
 
+    @Value("${mqtt.topic.room.prefix}")
+    private String roomTopicPrefix;
+
+    @Autowired
+    private RoomService roomService;
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
@@ -62,12 +69,17 @@ public class MqttConfig {
     }
 
     @Bean
-    public MessageProducer inbound() {
+    public MqttPahoMessageDrivenChannelAdapter inbound() {
+        String roomWildcardTopic = roomTopicPrefix + "/+";
+
+        log.info("===> MQTT subscribing to: [{}] and [{}]", notificationTopicIn, roomWildcardTopic);
+
         MqttPahoMessageDrivenChannelAdapter adapter =
                 new MqttPahoMessageDrivenChannelAdapter(
                         clientId + "in",
                         mqttClientFactory(),
-                        notificationTopicIn
+                        notificationTopicIn,
+                        roomWildcardTopic
                 );
 
         adapter.setQos(0);
@@ -86,9 +98,15 @@ public class MqttConfig {
             String topic = (String) message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC);
             log.info("Received from topic [{}]: {}", topic, payload);
             try {
+                String roomTopicPrefixWithSeparator = roomTopicPrefix.endsWith("/") ? roomTopicPrefix : roomTopicPrefix + "/";
+                if (topic != null && topic.startsWith(roomTopicPrefixWithSeparator)) {
+                    String roomIdValue = topic.substring(roomTopicPrefixWithSeparator.length());
+                    Long roomId = Long.parseLong(roomIdValue);
+                    roomService.handleRoomMessage(roomId, payload);
 //                mqttInboundService.handleInbound(payload);
+                }
             } catch (Exception e) {
-                log.error("Error processing mqtt message: {}", e.getMessage());
+                log.error("Error processing mqtt message: {}", e.getMessage(), e);
             }
         };
     }

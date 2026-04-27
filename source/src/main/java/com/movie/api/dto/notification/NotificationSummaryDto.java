@@ -1,20 +1,19 @@
-package com.movie.api.dto.comment;
+package com.movie.api.dto.notification;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.movie.api.dto.LongToStringIfWebSerializer;
 import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @ApiModel
-public class AuthorInfoDto {
+@AllArgsConstructor
+public class NotificationSummaryDto {
     @JsonSerialize(using = LongToStringIfWebSerializer.class)
-    private Long id;
-    private String email;
-    private String fullName;
-    private Integer kind;
-    private String avatarPath;
-    private Integer gender;
+    @ApiModelProperty(name = "totalUnread")
+    private Long totalUnread;
 }

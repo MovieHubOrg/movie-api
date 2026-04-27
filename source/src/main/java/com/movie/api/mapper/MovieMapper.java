@@ -121,6 +121,16 @@ public interface MovieMapper {
     @Named("entityToMovieNotificationDto")
     MovieNotificationDto entityToMovieNotificationDto(Movie movie);
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "originalTitle", target = "originalTitle")
+    @Mapping(source = "slug", target = "slug")
+    @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
+    @Mapping(source = "posterUrl", target = "posterUrl")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToMovieRoomDto")
+    MovieDto entityToMovieRoomDto(Movie movie);
+
     @Mapping(source = "title", target = "title")
     @Mapping(source = "originalTitle", target = "originalTitle")
     @Mapping(source = "description", target = "description")

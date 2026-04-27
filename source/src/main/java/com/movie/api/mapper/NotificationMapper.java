@@ -17,6 +17,7 @@ import java.util.List;
 public interface NotificationMapper {
     @Mapping(source = "id", target = "id")
     @Mapping(source = "title", target = "title")
+    @Mapping(source = "cmd", target = "cmd")
     @Mapping(source = "body", target = "body")
     @Mapping(source = "type", target = "type")
     @Mapping(source = "isRead", target = "isRead")

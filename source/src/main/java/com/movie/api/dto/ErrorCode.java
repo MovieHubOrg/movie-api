@@ -176,4 +176,27 @@ public class ErrorCode {
     public static final String SERVER_CONFIG_ERROR_IP_PORT_EXISTED = "ERROR-SERVER-CONFIG-0003";
     public static final String SERVER_CONFIG_ERROR_UNAUTHORIZED = "ERROR-SERVER-CONFIG-0004";
     public static final String SERVER_CONFIG_ERROR_USED_BY_VIDEO_LIBRARY = "ERROR-SERVER-CONFIG-0005";
+
+    /**
+     * Room error code
+     */
+    public static final String ROOM_ERROR_NOT_FOUND = "ERROR-ROOM-0000";
+    public static final String ROOM_ERROR_INVALID_TIME = "ERROR-ROOM-0001";
+    public static final String ROOM_ERROR_CODE_EXISTED = "ERROR-ROOM-0002";
+    public static final String ROOM_ERROR_INVALID_STATE = "ERROR-ROOM-0003";
+    public static final String ROOM_ERROR_INVALID_ROOM = "ERROR-ROOM-0004";
+    public static final String ROOM_ERROR_UNAUTHORIZED = "ERROR-ROOM-0005";
+
+    /**
+     * Room error code
+     */
+    public static final String PARTICIPANT_ERROR_NOT_FOUND = "ERROR-PARTICIPANT-0000";
+    public static final String ROOM_ERROR_ALREADY_JOINED = "ERROR-PARTICIPANT-0001";
+    public static final String ROOM_ERROR_HOST_NOT_JOINED = "ERROR-PARTICIPANT-0002";
+
+    /**
+     * Starting error code Setting
+     */
+    public static final String SETTING_ERROR_NOT_FOUND = "ERROR-SETTING-0000";
+    public static final String SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME = "ERROR-SETTING-0001";
 }

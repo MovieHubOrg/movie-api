@@ -12,4 +12,5 @@ public class VideoLibraryNotificationDto {
     private String name;
     private Long duration;
     private Integer state;
+    private String thumbnailUrl;
 }

@@ -11,4 +11,7 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long>, JpaSpecificationExecutor<Notification> {
     @Query("SELECT n FROM Notification n WHERE n.id IN :ids AND n.account.id = :accountId")
     List<Notification> findAllByIdInAndAccountId(@Param("ids") List<Long> ids, @Param("accountId") Long accountId);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.account.id = :accountId AND n.isRead = false")
+    long countUnreadByAccountId(@Param("accountId") Long accountId);
 }

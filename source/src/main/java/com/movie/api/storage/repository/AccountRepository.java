@@ -1,6 +1,7 @@
 package com.movie.api.storage.repository;
 
 import com.movie.api.storage.model.Account;
+import io.swagger.models.auth.In;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -13,4 +14,6 @@ public interface AccountRepository extends JpaRepository<Account, Long>, JpaSpec
     List<Account> findAllByStatusAndKindIn(Integer status, List<Integer> kind);
 
     List<Account> findAllByIdInAndStatus(List<Long> ids, Integer status);
+
+    List<Account> findAllByIdInAndKindAndStatus(List<Long> ids, Integer kind, Integer status);
 }
