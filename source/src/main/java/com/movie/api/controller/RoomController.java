@@ -9,6 +9,7 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.exception.UnauthorizationException;
 import com.movie.api.form.room.CreateRoomForm;
+import com.movie.api.service.SettingCacheService;
 import com.movie.api.form.room.TestLeftParticipantForm;
 import com.movie.api.mapper.RoomMapper;
 import com.movie.api.service.RoomService;
@@ -56,8 +57,12 @@ public class RoomController extends ABasicController {
 
     @Autowired
     private ChatRepository chatRepository;
+
     @Autowired
     private RoomService roomService;
+
+    @Autowired
+    private SettingCacheService settingCacheService;
 
     @GetMapping(value = "/check", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<RoomDto> check() {
@@ -80,7 +85,7 @@ public class RoomController extends ABasicController {
         Date startTime = Boolean.TRUE.equals(form.getIsStartNow())
                 ? new Date()
                 : form.getStartTime();
-        Date endTime = DateUtils.addHours(startTime, 4);
+        Date endTime = calculateEndTime(movieItem, startTime);
         if (!endTime.after(startTime)) {
             throw new BadRequestException("[Room] endTime invalid", ErrorCode.ROOM_ERROR_INVALID_TIME);
         }
@@ -193,6 +198,9 @@ public class RoomController extends ABasicController {
             }
 
             if (participant == null) {
+                if (Objects.equals(room.getKind(), BaseConstant.ROOM_KIND_PRIVATE)) {
+                    throw new UnauthorizationException("[Room] not allow to join private room", ErrorCode.ROOM_ERROR_UNAUTHORIZED);
+                }
                 Account user = accountRepository.findById(currentUserId)
                         .orElseThrow(() -> new NotFoundException("[User] not found", ErrorCode.USER_ERROR_NOT_FOUND));
                 participant = new Participant();
@@ -289,6 +297,16 @@ public class RoomController extends ABasicController {
             }
         }
         throw new BadRequestException("[Room] code existed", ErrorCode.ROOM_ERROR_CODE_EXISTED);
+    }
+
+    private Date calculateEndTime(MovieItem movieItem, Date startTime) {
+        Long videoDurationSeconds = movieItem.getVideo() != null ? movieItem.getVideo().getDuration() : null;
+        Date endTime = videoDurationSeconds != null
+                ? DateUtils.addSeconds(startTime, Math.toIntExact(videoDurationSeconds))
+                : DateUtils.addHours(startTime, 4);
+
+        Integer extraEndingMinutes = settingCacheService.getIntegerValue(BaseConstant.SETTING_KEY_LIVE_ROOM_EXTRA_ENDING_TIME);
+        return DateUtils.addMinutes(endTime, extraEndingMinutes);
     }
 
     private boolean isValidRoomMovieItem(MovieItem movieItem) {

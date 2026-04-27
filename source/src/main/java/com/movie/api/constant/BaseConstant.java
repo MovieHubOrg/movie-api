@@ -137,6 +137,8 @@ public class BaseConstant {
     public static final int MQTT_QOS_LEVEL_1 = 1; // At least once
     public static final int MQTT_QOS_LEVEL_2 = 2; // Exactly once
 
+    public static final String SETTING_KEY_LIVE_ROOM_EXTRA_ENDING_TIME = "live_room_extra_ending_time";
+
     private BaseConstant(){
         throw new IllegalStateException("Utility class");
     }

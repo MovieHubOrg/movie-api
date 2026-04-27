@@ -193,4 +193,10 @@ public class ErrorCode {
     public static final String PARTICIPANT_ERROR_NOT_FOUND = "ERROR-PARTICIPANT-0000";
     public static final String ROOM_ERROR_ALREADY_JOINED = "ERROR-PARTICIPANT-0001";
     public static final String ROOM_ERROR_HOST_NOT_JOINED = "ERROR-PARTICIPANT-0002";
+
+    /**
+     * Starting error code Setting
+     */
+    public static final String SETTING_ERROR_NOT_FOUND = "ERROR-SETTING-0000";
+    public static final String SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME = "ERROR-SETTING-0001";
 }
