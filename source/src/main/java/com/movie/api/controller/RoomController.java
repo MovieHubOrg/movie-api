@@ -9,7 +9,6 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.exception.UnauthorizationException;
 import com.movie.api.form.room.CreateRoomForm;
-import com.movie.api.form.room.TestChatForm;
 import com.movie.api.form.room.TestLeftParticipantForm;
 import com.movie.api.mapper.RoomMapper;
 import com.movie.api.service.RoomService;
@@ -20,7 +19,6 @@ import com.movie.api.utils.PasswordUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -61,9 +59,6 @@ public class RoomController extends ABasicController {
     @Autowired
     private RoomService roomService;
 
-    @Value("${server.internal.password}")
-    private String serverInternalPassword;
-
     @GetMapping(value = "/check", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<RoomDto> check() {
         Room room = roomRepository.findFirstByHostIdAndState(getCurrentUser(), BaseConstant.ROOM_STATE_RUNNING).orElse(null);
@@ -82,8 +77,10 @@ public class RoomController extends ABasicController {
             throw new BadRequestException("[MovieItem] invalid request", ErrorCode.MOVIE_ITEM_ERROR_INVALID_REQUEST);
         }
 
-        Date startTime = form.getStartTime();
-        Date endTime = form.getEndTime() != null ? form.getEndTime() : DateUtils.addHours(startTime, 4);
+        Date startTime = Boolean.TRUE.equals(form.getIsStartNow())
+                ? new Date()
+                : form.getStartTime();
+        Date endTime = DateUtils.addHours(startTime, 4);
         if (!endTime.after(startTime)) {
             throw new BadRequestException("[Room] endTime invalid", ErrorCode.ROOM_ERROR_INVALID_TIME);
         }
