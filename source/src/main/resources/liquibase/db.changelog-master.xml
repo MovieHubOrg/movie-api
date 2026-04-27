@@ -8,4 +8,5 @@
     <include file="20260401161608_changelog.xml" relativeToChangelogFile="true"/>
     <include file="20260405152618_changelog.xml" relativeToChangelogFile="true"/>
     <include file="20260418082004_changelog.xml" relativeToChangelogFile="true"/>
+    <include file="20260424142910_changelog.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

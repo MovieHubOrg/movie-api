@@ -6,6 +6,7 @@ import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Log4j2
 public class PasswordUtils {
@@ -17,9 +18,9 @@ public class PasswordUtils {
 
     private static final String ALL = UPPER + LOWER + DIGITS + SPECIAL;
 
-    public static String generateSecureRandomPassword() {
-        SecureRandom random = new SecureRandom();
+    private static final SecureRandom random = new SecureRandom();
 
+    public static String generateSecureRandomPassword() {
         StringBuilder password = new StringBuilder();
         password.append(UPPER.charAt(random.nextInt(UPPER.length())));
         password.append(LOWER.charAt(random.nextInt(LOWER.length())));
@@ -37,6 +38,19 @@ public class PasswordUtils {
 
         return chars.stream()
                 .map(String::valueOf)
+                .collect(Collectors.joining());
+    }
+
+    public static String generateRoomCode() {
+        return String.format("%s-%s-%s",
+                generateSegment(3),
+                generateSegment(4),
+                generateSegment(3));
+    }
+
+    private static String generateSegment(int length) {
+        return IntStream.range(0, length)
+                .mapToObj(i -> String.valueOf(LOWER.charAt(random.nextInt(LOWER.length()))))
                 .collect(Collectors.joining());
     }
 }

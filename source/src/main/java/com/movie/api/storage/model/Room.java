@@ -15,6 +15,8 @@ import java.util.Date;
 @Getter
 @Setter
 public class Room extends Auditable<String> {
+    private String name;
+
     private String code;
 
     private Integer kind; // 0: private, 1: public

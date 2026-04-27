@@ -1,0 +1,103 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1777040976603-1">
+        <createTable tableName="db_chat">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_chatPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="room_id" type="BIGINT"/>
+            <column name="content" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-2">
+        <createTable tableName="db_participant">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_participantPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="role" type="INT"/>
+            <column name="room_id" type="BIGINT"/>
+            <column name="state" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-3">
+        <createTable tableName="db_room">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_roomPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="code" type="VARCHAR(255)"/>
+            <column name="kind" type="INT"/>
+            <column name="movie_item_id" type="BIGINT"/>
+            <column name="host_id" type="BIGINT"/>
+            <column name="start_time" type="datetime"/>
+            <column name="end_time" type="datetime"/>
+            <column name="participant_count" type="INT"/>
+            <column name="state" type="INT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-4">
+        <addForeignKeyConstraint baseColumnNames="host_id" baseTableName="db_room" constraintName="FK91j6webm5p4mvghfd7ny5hb4e" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-5">
+        <addForeignKeyConstraint baseColumnNames="room_id" baseTableName="db_participant" constraintName="FKc6klitpbl6q2vgworb1e6q36o" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_room" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-6">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_participant" constraintName="FKg3ue7f0m1p24kf1pinf5rssw3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-7">
+        <addForeignKeyConstraint baseColumnNames="movie_item_id" baseTableName="db_room" constraintName="FKi7nj3f269o8mimhjmfe16kcw2" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_movie_item" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-8">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_chat" constraintName="FKpmsqo1cmqbu7i5itwn1ytge8p" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account" validate="true"/>
+    </changeSet>
+    <changeSet author="Movie" id="1777040976603-9">
+        <addForeignKeyConstraint baseColumnNames="room_id" baseTableName="db_chat" constraintName="FKtmcjeur5m88s7b1m0xq1m4c3q" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_room" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

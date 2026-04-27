@@ -63,6 +63,10 @@ public class BaseConstant {
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
+    public static final String CMD_PARTICIPANT_LEFT = "CMD_PARTICIPANT_LEFT";
+    public static final String CMD_END_ROOM = "CMD_END_ROOM";
+    public static final String CMD_UPDATE_PARTICIPANT_COUNT = "CMD_UPDATE_PARTICIPANT_COUNT";
+    public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
@@ -114,6 +118,20 @@ public class BaseConstant {
 
     public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
     public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
+
+    public static final Integer ROOM_KIND_PRIVATE = 0;
+    public static final Integer ROOM_KIND_PUBLIC = 1;
+
+    public static final Integer ROOM_STATE_PENDING = 0;
+    public static final Integer ROOM_STATE_RUNNING = 1;
+    public static final Integer ROOM_STATE_ENDING = 2;
+
+    public static final Integer PARTICIPANT_ROLE_GUEST = 0;
+    public static final Integer PARTICIPANT_ROLE_HOST = 1;
+
+    public static final Integer PARTICIPANT_STATE_PENDING = 0;
+    public static final Integer PARTICIPANT_STATE_JOIN = 1;
+    public static final Integer PARTICIPANT_STATE_LEFT = 2;
 
     public static final int MQTT_QOS_LEVEL_0 = 0; // Fire and forget
     public static final int MQTT_QOS_LEVEL_1 = 1; // At least once
