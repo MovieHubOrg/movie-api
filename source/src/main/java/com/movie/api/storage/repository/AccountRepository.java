@@ -1,7 +1,6 @@
 package com.movie.api.storage.repository;
 
 import com.movie.api.storage.model.Account;
-import io.swagger.models.auth.In;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 

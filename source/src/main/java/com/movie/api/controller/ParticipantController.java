@@ -23,17 +23,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,7 +51,7 @@ public class ParticipantController extends ABasicController {
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<ParticipantDto>> create(@Valid @RequestBody CreateParticipantForm form) {
+    public ApiMessageDto<Void> create(@Valid @RequestBody CreateParticipantForm form) {
         Room room = roomRepository.findByIdAndStatus(form.getRoomId(), BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Room] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
 
@@ -67,7 +60,7 @@ public class ParticipantController extends ABasicController {
             throw new BadRequestException("[Room] room state invalid", ErrorCode.ROOM_ERROR_INVALID_STATE);
         }
 
-        List<Long> accountIds = form.getAccounts().stream()
+        List<Long> accountIds = form.getAccountIds().stream()
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -83,7 +76,7 @@ public class ParticipantController extends ABasicController {
         Map<Long, Account> accountMap = accounts.stream()
                 .collect(Collectors.toMap(Account::getId, account -> account));
         Map<Long, Participant> existingParticipantMap = participantRepository
-                .findAllByRoom_IdAndUser_IdInAndStatus(room.getId(), accountIds, BaseConstant.STATUS_ACTIVE)
+                .findAllByRoomIdAndUserIdIn(room.getId(), accountIds)
                 .stream()
                 .collect(Collectors.toMap(participant -> participant.getUser().getId(), participant -> participant));
 
@@ -95,25 +88,16 @@ public class ParticipantController extends ABasicController {
                 participant = new Participant();
                 participant.setRoom(room);
                 participant.setUser(account);
+                participant.setRole(BaseConstant.PARTICIPANT_ROLE_GUEST);
             }
-
-            participant.setRole(Objects.equals(room.getHost().getId(), accountId)
-                    ? BaseConstant.PARTICIPANT_ROLE_HOST
-                    : BaseConstant.PARTICIPANT_ROLE_GUEST);
-            if (!Objects.equals(participant.getState(), BaseConstant.PARTICIPANT_STATE_JOIN)) {
-                participant.setState(BaseConstant.PARTICIPANT_STATE_PENDING);
-            }
-            participants.add(participantRepository.save(participant));
+            participants.add(participant);
         }
-
-        return makeSuccessResponse(
-                participantMapper.fromEntityToParticipantDtoList(participants),
-                "Create participant success"
-        );
+        participantRepository.saveAll(participants);
+        return makeSuccessResponse("Create participant success");
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<ParticipantDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<ParticipantDto> get(@PathVariable Long id) {
         Participant participant = participantRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Participant] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
         validateHostRoom(participant.getRoom());

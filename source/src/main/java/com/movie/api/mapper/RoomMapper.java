@@ -19,6 +19,7 @@ import java.util.List;
 public interface RoomMapper {
 
     @Mapping(source = "id", target = "id")
+    @Mapping(source = "name", target = "name")
     @Mapping(source = "code", target = "code")
     @Mapping(source = "kind", target = "kind")
     @Mapping(source = "movieItem", target = "movieItem", qualifiedByName = "entityToMovieItemRoomDto")

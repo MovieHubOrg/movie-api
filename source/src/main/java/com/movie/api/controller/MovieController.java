@@ -149,10 +149,19 @@ public class MovieController extends ABasicController {
             String title = !StringUtils.isNullOrEmpty(sendNotificationConfig.getTitle())
                     ? sendNotificationConfig.getTitle()
                     : String.format("Phim \"%s\" vừa được ra mắt!", movie.getTitle());
-            Date scheduleAt = sendNotificationConfig.getScheduleAt().before(movie.getReleaseDate())
-                    ? sendNotificationConfig.getScheduleAt()
-                    : movie.getReleaseDate();
-            notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_MOVIE, scheduleAt);
+            Date scheduleAt = movieService.resolveScheduleAt(sendNotificationConfig.getScheduleAt(), movie.getReleaseDate());
+            Integer targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_APP;
+            String targetValue = BaseConstant.APP_MOVIE;
+            if (Objects.equals(sendNotificationConfig.getSendFor(), BaseConstant.SEND_NOTIFICATION_FOR_INTERESTED_USERS)) {
+                List<Long> interestedUserIds = movieService.findInterestedUserIds(movie);
+                targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT;
+                targetValue = interestedUserIds.isEmpty()
+                        ? null
+                        : interestedUserIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            }
+            if (targetValue != null) {
+                notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, targetType, targetValue, scheduleAt);
+            }
         }
         return makeSuccessResponse("Create movie success");
     }
@@ -378,12 +387,7 @@ public class MovieController extends ABasicController {
     public ApiMessageDto<List<MovieDto>> suggestion(@PathVariable Long id) {
         Movie movie = movieRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
-        List<Movie> movies = movieRepository.findSuggestion(id,
-                movie.getCategories().stream().map(Category::getId).collect(Collectors.toList()),
-                movie.getCountry(),
-                movie.getLanguage(),
-                movie.getType(),
-                PageRequest.of(0, 10));
+        List<Movie> movies = movieService.findSuggestedMovies(movie, 10);
         return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies), "List movie success");
     }
 
@@ -412,14 +416,7 @@ public class MovieController extends ABasicController {
 
         Movie referenceMovie = completedMovies.get(position - 1).getMovie();
 
-        List<Movie> suggestedMovies = movieRepository.findSuggestion(
-                referenceMovie.getId(),
-                referenceMovie.getCategories().stream().map(Category::getId).collect(Collectors.toList()),
-                referenceMovie.getCountry(),
-                referenceMovie.getLanguage(),
-                referenceMovie.getType(),
-                PageRequest.of(0, 10)
-        );
+        List<Movie> suggestedMovies = movieService.findSuggestedMovies(referenceMovie, 10);
 
         SuggestByWatchedDto result = new SuggestByWatchedDto();
         result.setReferenceMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(referenceMovie));

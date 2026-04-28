@@ -27,4 +27,16 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 
     Optional<UserMovie> findByUserIdAndMovieId(Long userId, Long movieId);
+
+    @Query("SELECT DISTINCT um.userId " +
+            "FROM UserMovie um " +
+            "JOIN Account a ON a.id = um.userId " +
+            "WHERE um.movieId IN :movieIds " +
+            "AND a.status = :accountStatus " +
+            "AND a.kind = :accountKind")
+    List<Long> findDistinctUserIdsByMovieIds(
+            @Param("movieIds") List<Long> movieIds,
+            @Param("accountStatus") Integer accountStatus,
+            @Param("accountKind") Integer accountKind
+    );
 }

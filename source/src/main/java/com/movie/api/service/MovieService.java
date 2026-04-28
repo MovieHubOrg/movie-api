@@ -11,18 +11,19 @@ import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.MovieCriteria;
+import com.movie.api.storage.model.Category;
 import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.model.MovieItem;
 import com.movie.api.storage.repository.MovieRepository;
+import com.movie.api.storage.repository.UserMovieRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -41,6 +42,9 @@ public class MovieService {
 
     @Autowired
     private MovieItemMapper movieItemMapper;
+
+    @Autowired
+    private UserMovieRepository userMovieRepository;
 
     /**
      * Calculate reviewCount và averageRating for Movie.
@@ -145,6 +149,44 @@ public class MovieService {
         return movieRepository.findAll(criteria.getSpecification(), pageable).getContent();
     }
 
+    public List<Movie> findSuggestedMovies(Movie movie, int limit) {
+        if (movie == null || movie.getId() == null || movie.getCategories() == null || movie.getCategories().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> categoryIds = movie.getCategories().stream()
+                .map(Category::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (categoryIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int pageSize = limit > 0 ? limit : 10;
+        return movieRepository.findSuggestion(
+                movie.getId(),
+                categoryIds,
+                movie.getCountry(),
+                movie.getLanguage(),
+                movie.getType(),
+                PageRequest.of(0, pageSize)
+        );
+    }
+
+    public List<Long> findInterestedUserIds(Movie movie) {
+        List<Long> suggestedMovieIds = findSuggestedMovies(movie, 5).stream()
+                .map(Movie::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (suggestedMovieIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return userMovieRepository.findDistinctUserIdsByMovieIds(suggestedMovieIds, BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER);
+    }
+
     public void updateMetaDataMovie(MovieItem movieItem) {
         Movie movie = movieItem.getMovie();
         try {
@@ -210,5 +252,10 @@ public class MovieService {
         } catch (Exception ex) {
             log.error("Failed to clear metadata JSON for movie: {}", movie.getId(), ex);
         }
+    }
+
+    public Date resolveScheduleAt(Date requestedScheduleAt, Date releaseDate) {
+        Date base = (requestedScheduleAt != null) ? requestedScheduleAt : new Date();
+        return base.before(releaseDate) ? base : releaseDate;
     }
 }

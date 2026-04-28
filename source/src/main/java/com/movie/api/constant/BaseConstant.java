@@ -76,6 +76,9 @@ public class BaseConstant {
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;
     public static final Integer NOTIFICATION_TARGET_TYPE_ACCOUNT = 2;
 
+    public static final Integer SEND_NOTIFICATION_FOR_ALL_USERS = 1;
+    public static final Integer SEND_NOTIFICATION_FOR_INTERESTED_USERS = 2;
+
     public static final Integer NOTIFICATION_TYPE_CMS = 1;
     public static final Integer NOTIFICATION_TYPE_MOVIE = 2;
     public static final Integer NOTIFICATION_TYPE_COMMUNITY = 3;

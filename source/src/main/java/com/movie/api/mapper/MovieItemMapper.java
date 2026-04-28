@@ -12,7 +12,6 @@ import java.util.List;
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
         uses = {MovieMapper.class, VideoLibraryMapper.class})
 public interface MovieItemMapper {
-
     @Mapping(source = "id", target = "id")
     @Mapping(source = "title", target = "title")
     @Mapping(source = "description", target = "description")
@@ -127,7 +126,6 @@ public interface MovieItemMapper {
     @Mapping(source = "kind", target = "kind")
     @Mapping(source = "label", target = "label")
     @Mapping(source = "movie", target = "movie", qualifiedByName = "entityToMovieRoomDto")
-    @Mapping(source = "video", target = "video", qualifiedByName = "entityToVideoLibraryShortDto")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToMovieItemRoomDto")

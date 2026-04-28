@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.List;
@@ -64,6 +65,9 @@ public class CreateMovieForm {
     @ApiModelProperty(required = true)
     private Integer year;
 
+    @NotNull(message = "categoryIds cannot be null")
+    @NotEmpty(message = "categoryIds cannot be empty")
+    @ApiModelProperty(required = true)
     private List<@NotNull Long> categoryIds;
 
     @StatusConstraint
