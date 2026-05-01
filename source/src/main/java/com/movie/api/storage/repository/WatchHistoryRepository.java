@@ -68,13 +68,14 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
     @Query("update WatchHistory wh set wh.status = :statusDelete where wh.user.id = :userId and wh.movie.id = :movieId")
     void softDeleteByUserIdAndMovieId(@Param("statusDelete") Integer statusDelete, @Param("userId") Long userId, @Param("movieId") Long movieId);
 
-    @Query("SELECT wh FROM WatchHistory wh " +
+    @Query("SELECT movie FROM WatchHistory wh " +
+            "JOIN wh.movie movie " +
             "WHERE wh.user.id = :userId " +
             "AND wh.movieItem IS NULL " +
-            "AND wh.isCompleted = true " +
+            "AND (wh.isCompleted = true OR COALESCE(wh.timesWatched, 0) > 0) " +
             "AND wh.status = 1 " +
             "ORDER BY wh.modifiedDate DESC")
-    List<WatchHistory> findCompletedMoviesByUserOrderByDate(
+    List<Movie> findWatchedMoviesByUserOrderByDate(
             @Param("userId") Long userId,
             Pageable pageable
     );

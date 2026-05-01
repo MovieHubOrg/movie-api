@@ -38,7 +38,6 @@ public interface RoomMapper {
 
     @Mapping(source = "name", target = "name")
     @Mapping(source = "kind", target = "kind")
-    @Mapping(source = "startTime", target = "startTime")
     @BeanMapping(ignoreByDefault = true)
     Room fromCreateRoomFormToEntity(CreateRoomForm form);
 }

@@ -22,7 +22,6 @@ public interface SettingMapper {
     Setting fromCreateSettingFormToEntity(CreateSettingForm createSettingForm);
 
     @Mapping(source = "valueData", target = "valueData")
-    @Mapping(source = "status", target = "status")
     @Mapping(source = "groupName", target = "groupName")
     @Mapping(source = "description", target = "description")
     @Mapping(source = "keyName", target = "keyName")

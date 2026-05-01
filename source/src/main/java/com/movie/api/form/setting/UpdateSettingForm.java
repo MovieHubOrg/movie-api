@@ -15,9 +15,6 @@ public class UpdateSettingForm {
     @NotBlank(message = "valueData cannot be null")
     @ApiModelProperty(name = "valueData", required = true)
     private String valueData;
-    @NotNull(message = "status cannot be null")
-    @ApiModelProperty(name = "status", required = true)
-    private Integer status;
     @NotBlank(message = "groupName cannot be null")
     @ApiModelProperty(name = "groupName", required = true)
     private String groupName;

@@ -71,7 +71,7 @@ public class RoomController extends ABasicController {
     }
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<Void> create(@Valid @RequestBody CreateRoomForm form) {
+    public ApiMessageDto<RoomDto> create(@Valid @RequestBody CreateRoomForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[User] not found", ErrorCode.USER_ERROR_NOT_FOUND));
 
@@ -94,6 +94,7 @@ public class RoomController extends ABasicController {
         room.setCode(generateRoomCode());
         room.setMovieItem(movieItem);
         room.setHost(user);
+        room.setStartTime(startTime);
         room.setEndTime(endTime);
         room.setState(BaseConstant.ROOM_STATE_PENDING);
         roomRepository.save(room);
@@ -126,7 +127,7 @@ public class RoomController extends ABasicController {
 
         room.setParticipantCount(participants.size());
         roomRepository.save(room);
-        return makeSuccessResponse("Create room success");
+        return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Create room success");
     }
 
     @PostMapping(value = "/start/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -1,7 +1,9 @@
 package com.movie.api.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.review.ReviewStatisticsDto;
 import com.movie.api.exception.NotFoundException;
@@ -172,6 +174,23 @@ public class MovieService {
                 movie.getType(),
                 PageRequest.of(0, pageSize)
         );
+    }
+
+    public List<MovieDto> getCachedSuggestedMovies(Long movieId) {
+        // key -> movie:suggestion:{movieId}
+        String key = redisService.buildKey("movie", "suggestion", movieId.toString());
+        List<MovieDto> cachedMovies = redisService.get(key, new TypeReference<>() {
+        });
+        if (cachedMovies != null) {
+            return cachedMovies;
+        }
+
+        Movie movie = movieRepository.findByIdAndStatus(movieId, BaseConstant.STATUS_ACTIVE)
+                .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+
+        List<MovieDto> suggestedMovies = movieMapper.fromEntityToMovieAutoCompleteDtoList(findSuggestedMovies(movie, 10));
+        redisService.put(key, suggestedMovies, 5 * 60);
+        return suggestedMovies;
     }
 
     public List<Long> findInterestedUserIds(Movie movie) {

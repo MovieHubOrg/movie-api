@@ -323,12 +323,13 @@ public class MovieController extends ABasicController {
 
         log.debug("========> start remove movieId {}", movie.getId());
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
+        redisService.delete(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
         return makeSuccessResponse("Update movie success");
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_D')")
-    public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
 
@@ -380,47 +381,54 @@ public class MovieController extends ABasicController {
         movieRepository.delete(movie);
 
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
+        redisService.delete(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
         return makeSuccessResponse("Delete movie success");
     }
 
     @GetMapping(value = "/suggestion/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<List<MovieDto>> suggestion(@PathVariable Long id) {
-        Movie movie = movieRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
-                .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
-        List<Movie> movies = movieService.findSuggestedMovies(movie, 10);
-        return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies), "List movie success");
+        return makeSuccessResponse(movieService.getCachedSuggestedMovies(id), "List movie success");
+    }
+
+    @ApiIgnore
+    @GetMapping(value = "/list-watched", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> listWatched() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        List<Movie> watchedMovies = watchHistoryRepository
+                .findWatchedMoviesByUserOrderByDate(user.getId(), PageRequest.of(0, 3));
+
+        return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteShortDtoList(watchedMovies), "List watched movie success");
     }
 
     /**
      * Returns movies similar to a specific movie from the user's watch history.
      *
-     * @param position Position in watch history (1 = most recent completed, 2 = second, etc.)
+     * @param page Zero-based watch history page (0 = most recent watched, 1 = second, etc.)
      * @return List of recommended movies based on the selected reference movie
      */
     @GetMapping(value = "/suggest-by-watched", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "position") Integer position) {
-        // Validate position is within bounds
-        if (position < 1 || position > 3) {
-            return makeSuccessResponse(null, "Position must be between 1 and 3");
+    public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "page") Integer page) {
+        if (page < 0 || page > 2) {
+            return makeSuccessResponse(null, "Page must be between 0 and 2");
         }
 
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
-        List<WatchHistory> completedMovies = watchHistoryRepository
-                .findCompletedMoviesByUserOrderByDate(user.getId(), PageRequest.of(0, position));
+        List<Movie> watchedMovies = watchHistoryRepository
+                .findWatchedMoviesByUserOrderByDate(user.getId(), PageRequest.of(page, 1));
 
-        if (completedMovies.size() < position) {
+        if (watchedMovies.isEmpty()) {
             return makeSuccessResponse(null, "Not enough watch history");
         }
 
-        Movie referenceMovie = completedMovies.get(position - 1).getMovie();
-
-        List<Movie> suggestedMovies = movieService.findSuggestedMovies(referenceMovie, 10);
+        Movie watchedMovie = watchedMovies.get(0);
 
         SuggestByWatchedDto result = new SuggestByWatchedDto();
-        result.setReferenceMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(referenceMovie));
-        result.setSuggestedMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(suggestedMovies));
+        result.setWatchedMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(watchedMovie));
+        result.setSuggestedMovies(movieService.getCachedSuggestedMovies(watchedMovie.getId()));
         return makeSuccessResponse(result, "Suggest by watched recommendations");
     }
 

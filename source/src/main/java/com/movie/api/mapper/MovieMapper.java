@@ -127,6 +127,7 @@ public interface MovieMapper {
     @Mapping(source = "slug", target = "slug")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @Mapping(source = "posterUrl", target = "posterUrl")
+    @Mapping(source = "type", target = "type")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToMovieRoomDto")
     MovieDto entityToMovieRoomDto(Movie movie);
