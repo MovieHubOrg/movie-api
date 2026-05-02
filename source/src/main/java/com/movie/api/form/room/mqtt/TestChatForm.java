@@ -1,4 +1,4 @@
-package com.movie.api.form.room;
+package com.movie.api.form.room.mqtt;
 
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;

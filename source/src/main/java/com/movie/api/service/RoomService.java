@@ -8,11 +8,7 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.form.ErrorForm;
 import com.movie.api.form.mqtt.BaseSendMsgForm;
-import com.movie.api.form.room.ClientPingForm;
-import com.movie.api.form.room.CreateChatForm;
-import com.movie.api.form.room.EndRoomForm;
-import com.movie.api.form.room.ParticipantLeftForm;
-import com.movie.api.form.room.UpdateParticipantCountForm;
+import com.movie.api.form.room.mqtt.*;
 import com.movie.api.service.mqtt.MqttOutboundService;
 import com.movie.api.storage.model.Chat;
 import com.movie.api.storage.model.Participant;
@@ -20,6 +16,7 @@ import com.movie.api.storage.model.Room;
 import com.movie.api.storage.repository.ChatRepository;
 import com.movie.api.storage.repository.ParticipantRepository;
 import com.movie.api.storage.repository.RoomRepository;
+import com.movie.api.utils.ConvertUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -98,7 +95,10 @@ public class RoomService {
     }
 
     private void handleParticipantLeft(Room room, ParticipantLeftForm participantLeftForm) {
-        Long accountId = participantLeftForm.getAccountId();
+        Long accountId = ConvertUtils.convertStringToLong(participantLeftForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
         Participant participant = participantRepository.findByRoomIdAndUserId(room.getId(), accountId).orElse(null);
         if (participant == null) {
             log.warn("Participant {} not found in room {}", accountId, room.getId());
@@ -122,7 +122,10 @@ public class RoomService {
     }
 
     private void handleCreateChat(Room room, CreateChatForm createChatForm) {
-        Long accountId = createChatForm.getAccountId();
+        Long accountId = ConvertUtils.convertStringToLong(createChatForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
         Participant participant = participantRepository.findByRoomIdAndUserId(room.getId(), accountId).orElse(null);
         if (participant == null) {
             log.warn("Ignore chat because participant {} not found in room {}", accountId, room.getId());
@@ -146,7 +149,10 @@ public class RoomService {
     }
 
     private void handleClientPing(Room room, ClientPingForm clientPingForm) {
-        Long accountId = clientPingForm.getAccountId();
+        Long accountId = ConvertUtils.convertStringToLong(clientPingForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
         if (!Objects.equals(room.getHost().getId(), accountId)) {
             log.warn("Ignore client ping because account {} is not host of room {}", accountId, room.getId());
             return;
@@ -209,7 +215,7 @@ public class RoomService {
         );
 
         EndRoomForm endRoomForm = new EndRoomForm();
-        endRoomForm.setRoomId(room.getId());
+        endRoomForm.setRoomId(String.valueOf(room.getId()));
         endRoomForm.setReason(reason);
         publishToRoom(room.getId(), BaseConstant.CMD_END_ROOM, endRoomForm);
         return true;
@@ -218,7 +224,7 @@ public class RoomService {
     public void publishCurrentViewerCount(Room room) {
         int currentViewers = participantRepository.countByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
         UpdateParticipantCountForm form = new UpdateParticipantCountForm();
-        form.setRoomId(room.getId());
+        form.setRoomId(String.valueOf(room.getId()));
         form.setCurrentViewers(currentViewers);
         publishToRoom(room.getId(), BaseConstant.CMD_UPDATE_PARTICIPANT_COUNT, form);
         log.info("Room {} current viewers: {}", room.getId(), currentViewers);
@@ -226,14 +232,14 @@ public class RoomService {
 
     public void publishParticipantLeft(Long roomId, Long accountId) {
         ParticipantLeftForm form = new ParticipantLeftForm();
-        form.setAccountId(accountId);
+        form.setAccountId(accountId.toString());
         publishToRoom(roomId, BaseConstant.CMD_PARTICIPANT_LEFT, form);
         log.info("Published participant left test message for room {} account {}", roomId, accountId);
     }
 
     public void publishCreateChat(Long roomId, Long accountId, String content) {
         CreateChatForm form = new CreateChatForm();
-        form.setAccountId(accountId);
+        form.setAccountId(accountId.toString());
         form.setContent(content);
         publishToRoom(roomId, BaseConstant.CMD_CREATE_CHAT, form);
         log.info("Published create chat test message for room {} account {}", roomId, accountId);

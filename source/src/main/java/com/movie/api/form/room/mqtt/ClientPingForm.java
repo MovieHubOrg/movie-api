@@ -1,17 +1,17 @@
-package com.movie.api.form.room;
+package com.movie.api.form.room.mqtt;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 
 @Getter
 @Setter
 @ApiModel
 public class ClientPingForm {
-    @NotNull(message = "accountId cannot be null")
+    @NotBlank(message = "accountId cannot be blank")
     @ApiModelProperty(required = true)
-    private Long accountId;
+    private String accountId;
 }

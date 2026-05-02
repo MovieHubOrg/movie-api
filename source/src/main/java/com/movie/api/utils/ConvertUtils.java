@@ -1,16 +1,15 @@
 package com.movie.api.utils;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class ConvertUtils {
-
-    private ConvertUtils() {
-
-    }
-
     public static Long convertStringToLong(String input) {
         try {
-            return Long.parseLong(input);
-        } catch (Exception e) {
-            return Long.valueOf(0);
+            return Long.valueOf(input.trim());
+        } catch (RuntimeException e) {
+            log.warn("Failed to convert string to long: {}", input, e);
+            return null;
         }
     }
 

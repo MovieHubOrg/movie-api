@@ -7,7 +7,7 @@ import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.chat.ChatDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
-import com.movie.api.form.room.TestChatForm;
+import com.movie.api.form.room.mqtt.TestChatForm;
 import com.movie.api.mapper.ChatMapper;
 import com.movie.api.service.RoomService;
 import com.movie.api.storage.criteria.ChatCriteria;
