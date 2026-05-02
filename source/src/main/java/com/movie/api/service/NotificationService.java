@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.comment.CommentNotificationDto;
 import com.movie.api.dto.movie.MovieNotificationDto;
+import com.movie.api.dto.movieItem.MovieItemNotificationDto;
 import com.movie.api.dto.notification.NotificationDto;
 import com.movie.api.dto.oneSignal.AdditionalData;
 import com.movie.api.dto.oneSignal.Content;
@@ -125,6 +126,15 @@ public class NotificationService {
                     sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + movie.getThumbnailUrl());
                 } catch (Exception e) {
                     log.warn("Failed to parse movie data for notification message: {}", e.getMessage());
+                }
+            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_NEW_MOVIE_ITEM)) {
+                try {
+                    MovieItemNotificationDto movieItem = objectMapper.readValue(template.getBody(), MovieItemNotificationDto.class);
+                    sendNotificationForm.setMessage(String.format("\"%s\" vừa có nội dung mới: %s - Xem ngay kẻo lỡ!", movieItem.getMovie().getTitle(), movieItem.getTitle()));
+                    String imageUrl = movieItem.getThumbnailUrl() != null ? movieItem.getThumbnailUrl() : movieItem.getMovie().getThumbnailUrl();
+                    sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + imageUrl);
+                } catch (Exception e) {
+                    log.warn("Failed to parse movie item data for notification message: {}", e.getMessage());
                 }
             } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_REPLY_COMMENT)) {
                 try {

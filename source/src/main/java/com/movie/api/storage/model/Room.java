@@ -35,5 +35,7 @@ public class Room extends Auditable<String> {
 
     private Integer state = 1; // 0: pending, 1: running, 2: ending
 
+    private Date lastTimeOnline;
+
     private Integer participantCount = 0;
 }

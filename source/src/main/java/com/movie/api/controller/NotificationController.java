@@ -124,4 +124,11 @@ public class NotificationController extends ABasicController {
         notificationRepository.saveAll(notifications);
         return makeSuccessResponse("Update notification read success");
     }
+
+    @PutMapping(value = "/read-all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('NOTI_U')")
+    public ApiMessageDto<Void> readAll() {
+        notificationRepository.markAllUnreadAsReadByAccountId(getCurrentUser());
+        return makeSuccessResponse("Read all notifications success");
+    }
 }

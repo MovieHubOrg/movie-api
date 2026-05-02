@@ -62,14 +62,17 @@ public class BaseConstant {
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
+    public static final String CMD_NEW_MOVIE_ITEM = "CMD_NEW_MOVIE_ITEM";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
     public static final String CMD_PARTICIPANT_LEFT = "CMD_PARTICIPANT_LEFT";
     public static final String CMD_END_ROOM = "CMD_END_ROOM";
     public static final String CMD_UPDATE_PARTICIPANT_COUNT = "CMD_UPDATE_PARTICIPANT_COUNT";
     public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
+    public static final String CMD_CLIENT_PING = "CMD_CLIENT_PING";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
+            BaseConstant.CMD_NEW_MOVIE_ITEM,
             BaseConstant.CMD_REPLY_COMMENT
     );
 
@@ -128,6 +131,10 @@ public class BaseConstant {
     public static final Integer ROOM_STATE_PENDING = 0;
     public static final Integer ROOM_STATE_RUNNING = 1;
     public static final Integer ROOM_STATE_ENDING = 2;
+
+    public static final String ROOM_END = "ROOM_END";
+    public static final String ROOM_TIMEOUT = "ROOM_TIMEOUT";
+    public static final String HOST_LEFT = "HOST_LEFT";
 
     public static final Integer PARTICIPANT_ROLE_GUEST = 0;
     public static final Integer PARTICIPANT_ROLE_HOST = 1;

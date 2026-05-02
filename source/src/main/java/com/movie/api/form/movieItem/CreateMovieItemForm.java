@@ -1,5 +1,6 @@
 package com.movie.api.form.movieItem;
 
+import com.movie.api.form.notification.SendNotificationConfigForm;
 import com.movie.api.validation.MovieItemKindConstraint;
 import com.movie.api.validation.StatusConstraint;
 import io.swagger.annotations.ApiModel;
@@ -7,6 +8,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -59,4 +61,9 @@ public class CreateMovieItemForm {
 
     @ApiModelProperty
     private Boolean isLatest = false;
+
+    @Valid
+    @NotNull(message = "sendNotificationConfig cannot be null")
+    @ApiModelProperty(required = true)
+    private SendNotificationConfigForm sendNotificationConfig;
 }

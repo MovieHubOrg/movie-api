@@ -151,6 +151,7 @@ public class RoomController extends ABasicController {
         }
 
         room.setStartTime(now);
+        room.setLastTimeOnline(now);
         room.setState(BaseConstant.ROOM_STATE_RUNNING);
         roomRepository.save(room);
         return makeSuccessResponse("Start room success");
@@ -166,7 +167,7 @@ public class RoomController extends ABasicController {
         if (!Objects.equals(room.getState(), BaseConstant.ROOM_STATE_RUNNING)) {
             throw new BadRequestException("[Room] room state invalid", ErrorCode.ROOM_ERROR_INVALID_STATE);
         }
-        roomService.endRoom(room, "ROOM_END");
+        roomService.endRoom(room, BaseConstant.ROOM_END);
         return makeSuccessResponse("End room success");
     }
 
@@ -191,6 +192,8 @@ public class RoomController extends ABasicController {
                 throw new BadRequestException("[Room] already joined", ErrorCode.ROOM_ERROR_ALREADY_JOINED);
             }
             participant.setState(BaseConstant.PARTICIPANT_STATE_JOIN);
+            room.setLastTimeOnline(new Date());
+            roomRepository.save(room);
 
         } else {
             boolean isHostJoined = participantRepository.existsByRoomIdAndRoleAndState(id, BaseConstant.PARTICIPANT_ROLE_HOST, BaseConstant.PARTICIPANT_STATE_JOIN);
