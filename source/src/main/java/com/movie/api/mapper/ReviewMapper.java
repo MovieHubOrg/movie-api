@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.review.ReviewDto;
+import com.movie.api.dto.review.ReviewNotificationDto;
 import com.movie.api.form.review.CreateReviewForm;
 import com.movie.api.form.review.UpdateReviewForm;
 import com.movie.api.storage.model.Review;
@@ -29,6 +30,15 @@ public interface ReviewMapper {
 
     @IterableMapping(elementTargetType = ReviewDto.class, qualifiedByName = "entityToReviewDto")
     List<ReviewDto> fromEntityToReviewDtoList(List<Review> reviews);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "movieId", target = "movieId")
+    @Mapping(source = "rate", target = "rate")
+    @Mapping(source = "content", target = "content")
+    @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountNotificationDto")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToReviewNotificationDto")
+    ReviewNotificationDto entityToReviewNotificationDto(Review review);
 
     @Mapping(source = "rate", target = "rate")
     @Mapping(source = "content", target = "content")

@@ -64,6 +64,8 @@ public class BaseConstant {
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
     public static final String CMD_NEW_MOVIE_ITEM = "CMD_NEW_MOVIE_ITEM";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
+    public static final String CMD_VOTE_COMMENT = "CMD_VOTE_COMMENT";
+    public static final String CMD_VOTE_REVIEW = "CMD_VOTE_REVIEW";
     public static final String CMD_PARTICIPANT_LEFT = "CMD_PARTICIPANT_LEFT";
     public static final String CMD_END_ROOM = "CMD_END_ROOM";
     public static final String CMD_UPDATE_PARTICIPANT_COUNT = "CMD_UPDATE_PARTICIPANT_COUNT";
@@ -73,7 +75,9 @@ public class BaseConstant {
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
             BaseConstant.CMD_NEW_MOVIE_ITEM,
-            BaseConstant.CMD_REPLY_COMMENT
+            BaseConstant.CMD_REPLY_COMMENT,
+            BaseConstant.CMD_VOTE_COMMENT,
+            BaseConstant.CMD_VOTE_REVIEW
     );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;

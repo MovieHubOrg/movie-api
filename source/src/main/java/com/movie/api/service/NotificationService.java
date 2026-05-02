@@ -11,6 +11,7 @@ import com.movie.api.dto.oneSignal.AdditionalData;
 import com.movie.api.dto.oneSignal.Content;
 import com.movie.api.dto.oneSignal.IncludeAliases;
 import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
+import com.movie.api.dto.review.ReviewNotificationDto;
 import com.movie.api.form.notification.SendNotificationForm;
 import com.movie.api.service.mqtt.MqttOutboundService;
 import com.movie.api.service.rabbit.RabbitService;
@@ -23,6 +24,8 @@ import com.movie.api.storage.repository.NotificationTemplateRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,7 +90,8 @@ public class NotificationService {
     @Transactional
     public void processScheduledNotificationTemplates() {
         Date now = new Date();
-        List<NotificationTemplate> templates = notificationTemplateRepository.findAllByStatusAndScheduleAtLessThanEqual(BaseConstant.STATUS_PENDING, now);
+        Pageable pageable = PageRequest.of(0, 50);
+        List<NotificationTemplate> templates = notificationTemplateRepository.findAllByStatusAndScheduleAtLessThanEqual(BaseConstant.STATUS_PENDING, now, pageable);
 
         if (templates.isEmpty()) {
             return;
@@ -143,6 +147,28 @@ public class NotificationService {
                     sendNotificationForm.setMessage(message);
                 } catch (Exception e) {
                     log.warn("Failed to parse comment data for notification message: {}", e.getMessage());
+                }
+            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_VOTE_COMMENT)) {
+                try {
+                    CommentNotificationDto comment = objectMapper.readValue(template.getBody(), CommentNotificationDto.class);
+                    String action = Objects.equals(comment.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
+                            ? "đã thích"
+                            : "đã không thích";
+                    String message = String.format("%s %s bình luận của bạn: %s", comment.getAuthor().getFullName(), action, comment.getContent());
+                    sendNotificationForm.setMessage(message);
+                } catch (Exception e) {
+                    log.warn("Failed to parse comment vote data for notification message: {}", e.getMessage());
+                }
+            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_VOTE_REVIEW)) {
+                try {
+                    ReviewNotificationDto review = objectMapper.readValue(template.getBody(), ReviewNotificationDto.class);
+                    String action = Objects.equals(review.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
+                            ? "đã thích"
+                            : "đã không thích";
+                    String message = String.format("%s %s đánh giá của bạn: %s", review.getAuthor().getFullName(), action, review.getContent());
+                    sendNotificationForm.setMessage(message);
+                } catch (Exception e) {
+                    log.warn("Failed to parse review vote data for notification message: {}", e.getMessage());
                 }
             }
 

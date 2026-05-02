@@ -10,10 +10,11 @@ import com.movie.api.dto.oneSignal.AdditionalData;
 import com.movie.api.dto.oneSignal.Content;
 import com.movie.api.dto.oneSignal.IncludeAliases;
 import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
-import com.movie.api.form.notification.SendNotificationConfigForm;
+import com.movie.api.exception.NotFoundException;
+import com.movie.api.exception.UnauthorizationException;
+import com.movie.api.form.notification.TestSendNotificationForm;
 import com.movie.api.form.notification.TestSendOneSignalForm;
 import com.movie.api.form.notification.UpdateReadNotificationForm;
-import com.movie.api.form.notification.TestSendNotificationForm;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.NotificationMapper;
 import com.movie.api.service.CommonAsyncService;
@@ -32,11 +33,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -98,6 +99,21 @@ public class NotificationController extends ABasicController {
         return makeSuccessResponse("Send OneSignal notification success");
     }
 
+    @ApiIgnore
+    @Transactional
+    @DeleteMapping(value = "/reset-data", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<Void> resetData(@RequestParam(required = false) Long accountId) {
+        if (!isSuperAdmin()) {
+            throw new UnauthorizationException("[Notification] Unauthorized");
+        }
+        if (accountId != null) {
+            notificationRepository.deleteByAccountId(accountId);
+        } else {
+            notificationRepository.deleteAllInBatch();
+        }
+        return makeSuccessResponse("Reset notification data success");
+    }
+
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('NOTI_L')")
     public ApiMessageDto<ResponseListDto<List<NotificationDto>>> list(NotificationCriteria criteria, Pageable pageable) {
@@ -130,5 +146,21 @@ public class NotificationController extends ABasicController {
     public ApiMessageDto<Void> readAll() {
         notificationRepository.markAllUnreadAsReadByAccountId(getCurrentUser());
         return makeSuccessResponse("Read all notifications success");
+    }
+
+    @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('NOTI_D')")
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
+        Notification notification = notificationRepository.findByIdAndAccountId(id, getCurrentUser())
+                .orElseThrow(() -> new NotFoundException("[Notification] not found"));
+        notificationRepository.delete(notification);
+        return makeSuccessResponse("Delete notification success");
+    }
+
+    @DeleteMapping(value = "/delete-all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('NOTI_D')")
+    public ApiMessageDto<Void> deleteAll() {
+        notificationRepository.deleteByAccountId(getCurrentUser());
+        return makeSuccessResponse("Delete all notifications success");
     }
 }
