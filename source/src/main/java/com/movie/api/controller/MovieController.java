@@ -323,7 +323,8 @@ public class MovieController extends ABasicController {
 
         log.debug("========> start remove movieId {}", movie.getId());
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
-        redisService.delete(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "recommendation"));
         return makeSuccessResponse("Update movie success");
     }
 
@@ -381,7 +382,8 @@ public class MovieController extends ABasicController {
         movieRepository.delete(movie);
 
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
-        redisService.delete(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "recommendation"));
         return makeSuccessResponse("Delete movie success");
     }
 
@@ -430,6 +432,14 @@ public class MovieController extends ABasicController {
         result.setWatchedMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(watchedMovie));
         result.setSuggestedMovies(movieService.getCachedSuggestedMovies(watchedMovie.getId()));
         return makeSuccessResponse(result, "Suggest by watched recommendations");
+    }
+
+    @GetMapping(value = "/recommendation", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> recommendation() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        return makeSuccessResponse(movieService.getRecommendationsForUser(user.getId(), 20), "List recommendation movie success");
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)

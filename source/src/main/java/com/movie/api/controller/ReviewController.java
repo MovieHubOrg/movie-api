@@ -34,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -181,14 +180,13 @@ public class ReviewController extends ABasicController {
         String title = Objects.equals(reactionType, BaseConstant.REACTION_TYPE_LIKE)
                 ? String.format("%s đã thích đánh giá của bạn", voter.getFullName())
                 : String.format("%s đã không thích đánh giá của bạn", voter.getFullName());
-        notificationService.createNotificationTemplate(
+        notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_VOTE_REVIEW,
                 data,
                 BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
-                String.valueOf(review.getAuthor().getId()),
-                new Date()
+                String.valueOf(review.getAuthor().getId())
         );
     }
 

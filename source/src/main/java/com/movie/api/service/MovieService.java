@@ -16,6 +16,7 @@ import com.movie.api.storage.criteria.MovieCriteria;
 import com.movie.api.storage.model.Category;
 import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.model.MovieItem;
+import com.movie.api.storage.model.UserMovie;
 import com.movie.api.storage.repository.MovieRepository;
 import com.movie.api.storage.repository.UserMovieRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -193,6 +195,21 @@ public class MovieService {
         return suggestedMovies;
     }
 
+    public List<MovieDto> getCachedSuggestedMovies(Movie movie, int limit) {
+        // key -> movie:suggestion:{movieId}
+        int suggestionLimit = limit > 0 ? limit : 10;
+        String key = redisService.buildKey("movie", "suggestion", movie.getId().toString(), String.valueOf(suggestionLimit));
+        List<MovieDto> cachedMovies = redisService.get(key, new TypeReference<>() {
+        });
+        if (cachedMovies != null) {
+            return cachedMovies;
+        }
+
+        List<MovieDto> suggestedMovies = movieMapper.fromEntityToMovieAutoCompleteDtoList(findSuggestedMovies(movie, suggestionLimit));
+        redisService.put(key, suggestedMovies, 5 * 60);
+        return suggestedMovies;
+    }
+
     public List<Long> findInterestedUserIds(Movie movie) {
         List<Long> suggestedMovieIds = findSuggestedMovies(movie, 5).stream()
                 .map(Movie::getId)
@@ -204,6 +221,86 @@ public class MovieService {
         }
 
         return userMovieRepository.findDistinctUserIdsByMovieIds(suggestedMovieIds, BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER);
+    }
+
+    public List<MovieDto> getRecommendationsForUser(Long userId, int limit) {
+        int recommendationLimit = limit > 0 ? limit : 10;
+        String key = redisService.buildKey(
+                "movie",
+                "recommendation",
+                userId.toString(),
+                String.valueOf(recommendationLimit)
+        );
+        List<MovieDto> cachedMovies = redisService.get(key, new TypeReference<>() {
+        });
+        if (cachedMovies != null) {
+            return cachedMovies;
+        }
+
+        List<UserMovie> recentFavouriteUserMovies = userMovieRepository.findByUserIdAndTypeOrderByModifiedDateDesc(
+                userId,
+                BaseConstant.USER_MOVIE_TYPE_INTERESTED,
+                PageRequest.of(0, 5)
+        );
+
+        List<Long> favouriteMovieIds = recentFavouriteUserMovies.stream()
+                .map(UserMovie::getMovieId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        List<Movie> favouriteMovies = findActiveMoviesByIds(favouriteMovieIds);
+
+
+        Set<Long> excludedMovieIds = userMovieRepository.findMovieIdsByUserIdAndType(userId, BaseConstant.USER_MOVIE_TYPE_WATCHED)
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        excludedMovieIds.addAll(favouriteMovieIds);
+
+        List<MovieDto> recommendedMovies = findSuggestedMovies(favouriteMovies, excludedMovieIds, recommendationLimit);
+        redisService.put(key, recommendedMovies, 5 * 60);
+        return recommendedMovies;
+    }
+
+    public List<MovieDto> findSuggestedMovies(List<Movie> movies, Set<Long> excludedMovieIds, int limit) {
+        if (movies == null || movies.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int recommendationLimit = limit > 0 ? limit : 10;
+        Map<Long, MovieDto> recommendedMovies = new LinkedHashMap<>();
+        int candidateLimit = Math.max(recommendationLimit * 3, recommendationLimit + Math.min(excludedMovieIds.size(), 50));
+        for (Movie movie : movies) {
+            List<MovieDto> suggestedMovies = getCachedSuggestedMovies(movie, candidateLimit);
+            for (MovieDto suggestedMovie : suggestedMovies) {
+                if (suggestedMovie.getId() == null || excludedMovieIds.contains(suggestedMovie.getId())) {
+                    continue;
+                }
+                recommendedMovies.putIfAbsent(suggestedMovie.getId(), suggestedMovie);
+                if (recommendedMovies.size() >= recommendationLimit) {
+                    break;
+                }
+            }
+            if (recommendedMovies.size() >= recommendationLimit) {
+                break;
+            }
+        }
+        return new ArrayList<>(recommendedMovies.values());
+    }
+
+    private List<Movie> findActiveMoviesByIds(List<Long> movieIds) {
+        if (movieIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, Movie> movieById = movieRepository.findAllByIdInAndStatus(movieIds, BaseConstant.STATUS_ACTIVE)
+                .stream()
+                .collect(Collectors.toMap(Movie::getId, Function.identity(), (a, b) -> a));
+
+        return movieIds.stream()
+                .map(movieById::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public void updateMetaDataMovie(MovieItem movieItem) {

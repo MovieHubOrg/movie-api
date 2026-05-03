@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -130,14 +129,13 @@ public class CommentController extends ABasicController {
         data.setMovieTitle(movie.getTitle());
         data.setMovieThumbnail(movie.getThumbnailUrl());
         String title = String.format("%s đã trả lời bình luận của bạn", author.getFullName());
-        notificationService.createNotificationTemplate(
+        notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_REPLY_COMMENT,
                 data,
                 BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
-                String.valueOf(replyTo.getId()),
-                new Date()
+                String.valueOf(replyTo.getId())
         );
     }
 
@@ -247,14 +245,13 @@ public class CommentController extends ABasicController {
         String title = Objects.equals(reactionType, BaseConstant.REACTION_TYPE_LIKE)
                 ? String.format("%s đã thích bình luận của bạn: \"%s\"", voter.getFullName(), comment.getContent())
                 : String.format("%s đã không thích bình luận của bạn: \"%s\"", voter.getFullName(), comment.getContent());
-        notificationService.createNotificationTemplate(
+        notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_VOTE_COMMENT,
                 data,
                 BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
-                String.valueOf(comment.getAuthor().getId()),
-                new Date()
+                String.valueOf(comment.getAuthor().getId())
         );
     }
 

@@ -74,17 +74,40 @@ public class NotificationService {
         NotificationTemplate notificationTemplate = new NotificationTemplate();
         notificationTemplate.setTitle(title);
         notificationTemplate.setCmd(cmd);
-        try {
-            notificationTemplate.setBody(body != null ? objectMapper.writeValueAsString(body) : null);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to serialize notification body", e);
-        }
+        notificationTemplate.setBody(serializeNotificationBody(body));
         notificationTemplate.setType(type);
         notificationTemplate.setTargetType(targetType);
         notificationTemplate.setTargetValue(targetValue);
         notificationTemplate.setScheduleAt(scheduleAt);
         notificationTemplate.setStatus(BaseConstant.STATUS_PENDING);
         notificationTemplateRepository.save(notificationTemplate);
+    }
+
+    @Transactional
+    public <T> void sendNotificationMessage(String title, String cmd, T body, Integer type, Integer targetType, String targetValue) {
+        String notificationBody = serializeNotificationBody(body);
+        List<Account> accounts = resolveTargetAccounts(targetType, targetValue);
+        if (accounts.isEmpty()) {
+            log.warn("No account found for notification cmd {}", cmd);
+            return;
+        }
+
+        List<Notification> notifications = accounts.stream()
+                .map(account -> buildNotification(title, cmd, notificationBody, type, account))
+                .collect(Collectors.toList());
+        notificationRepository.saveAll(notifications);
+        log.info("Created {} notifications for cmd {}", notifications.size(), cmd);
+
+        SendNotificationForm sendNotificationForm = buildSendNotificationForm(title, cmd, notificationBody, type, targetType, targetValue, accounts);
+        rabbitService.handleSendMsg(
+                appName,
+                updateVideoQueue,
+                sendNotificationForm,
+                BaseConstant.CMD_SEND_NOTIFICATION,
+                null,
+                null,
+                null
+        );
     }
 
     @Transactional
@@ -112,66 +135,15 @@ public class NotificationService {
             notificationRepository.saveAll(notifications);
             log.info("Created {} notifications from template id {}", notifications.size(), template.getId());
 
-            SendNotificationForm sendNotificationForm = new SendNotificationForm();
-            sendNotificationForm.setTitle(template.getTitle());
-            sendNotificationForm.setCmd(template.getCmd());
-            sendNotificationForm.setBody(template.getBody());
-            sendNotificationForm.setType(template.getType());
-            sendNotificationForm.setTargetType(template.getTargetType());
-            sendNotificationForm.setTargetValue(template.getTargetValue());
-            if (Objects.equals(template.getTargetType(), BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT)) {
-                sendNotificationForm.setAccountIds(accounts.stream().map(Account::getId).collect(Collectors.toList()));
-            }
-
-            if (Objects.equals(template.getCmd(), BaseConstant.CMD_NEW_MOVIE)) {
-                try {
-                    MovieNotificationDto movie = objectMapper.readValue(template.getBody(), MovieNotificationDto.class);
-                    sendNotificationForm.setMessage(String.format("\"%s\" đã lên sóng - Xem ngay kẻo lỡ!", movie.getTitle()));
-                    sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + movie.getThumbnailUrl());
-                } catch (Exception e) {
-                    log.warn("Failed to parse movie data for notification message: {}", e.getMessage());
-                }
-            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_NEW_MOVIE_ITEM)) {
-                try {
-                    MovieItemNotificationDto movieItem = objectMapper.readValue(template.getBody(), MovieItemNotificationDto.class);
-                    sendNotificationForm.setMessage(String.format("\"%s\" vừa có nội dung mới: %s - Xem ngay kẻo lỡ!", movieItem.getMovie().getTitle(), movieItem.getTitle()));
-                    String imageUrl = movieItem.getThumbnailUrl() != null ? movieItem.getThumbnailUrl() : movieItem.getMovie().getThumbnailUrl();
-                    sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + imageUrl);
-                } catch (Exception e) {
-                    log.warn("Failed to parse movie item data for notification message: {}", e.getMessage());
-                }
-            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_REPLY_COMMENT)) {
-                try {
-                    CommentNotificationDto comment = objectMapper.readValue(template.getBody(), CommentNotificationDto.class);
-                    String message = String.format("%s đã trả lời bình luận của bạn: %s", comment.getAuthor().getFullName(), comment.getContent());
-                    sendNotificationForm.setMessage(message);
-                } catch (Exception e) {
-                    log.warn("Failed to parse comment data for notification message: {}", e.getMessage());
-                }
-            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_VOTE_COMMENT)) {
-                try {
-                    CommentNotificationDto comment = objectMapper.readValue(template.getBody(), CommentNotificationDto.class);
-                    String action = Objects.equals(comment.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
-                            ? "đã thích"
-                            : "đã không thích";
-                    String message = String.format("%s %s bình luận của bạn: %s", comment.getAuthor().getFullName(), action, comment.getContent());
-                    sendNotificationForm.setMessage(message);
-                } catch (Exception e) {
-                    log.warn("Failed to parse comment vote data for notification message: {}", e.getMessage());
-                }
-            } else if (Objects.equals(template.getCmd(), BaseConstant.CMD_VOTE_REVIEW)) {
-                try {
-                    ReviewNotificationDto review = objectMapper.readValue(template.getBody(), ReviewNotificationDto.class);
-                    String action = Objects.equals(review.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
-                            ? "đã thích"
-                            : "đã không thích";
-                    String message = String.format("%s %s đánh giá của bạn: %s", review.getAuthor().getFullName(), action, review.getContent());
-                    sendNotificationForm.setMessage(message);
-                } catch (Exception e) {
-                    log.warn("Failed to parse review vote data for notification message: {}", e.getMessage());
-                }
-            }
-
+            SendNotificationForm sendNotificationForm = buildSendNotificationForm(
+                    template.getTitle(),
+                    template.getCmd(),
+                    template.getBody(),
+                    template.getType(),
+                    template.getTargetType(),
+                    template.getTargetValue(),
+                    accounts
+            );
             rabbitService.handleSendMsg(
                     appName,
                     updateVideoQueue,
@@ -197,6 +169,90 @@ public class NotificationService {
         notification.setBody(template.getBody());
         notification.setType(template.getType());
         return notification;
+    }
+
+    private Notification buildNotification(String title, String cmd, String body, Integer type, Account account) {
+        Notification notification = new Notification();
+        notification.setAccount(account);
+        notification.setTitle(title);
+        notification.setCmd(cmd);
+        notification.setBody(body);
+        notification.setType(type);
+        return notification;
+    }
+
+    private SendNotificationForm buildSendNotificationForm(String title, String cmd, String body, Integer type, Integer targetType, String targetValue, List<Account> accounts) {
+        SendNotificationForm sendNotificationForm = new SendNotificationForm();
+        sendNotificationForm.setTitle(title);
+        sendNotificationForm.setCmd(cmd);
+        sendNotificationForm.setBody(body);
+        sendNotificationForm.setType(type);
+        sendNotificationForm.setTargetType(targetType);
+        sendNotificationForm.setTargetValue(targetValue);
+        if (Objects.equals(targetType, BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT)) {
+            sendNotificationForm.setAccountIds(accounts.stream().map(Account::getId).collect(Collectors.toList()));
+        }
+        enrichNotificationMessage(sendNotificationForm);
+        return sendNotificationForm;
+    }
+
+    private void enrichNotificationMessage(SendNotificationForm sendNotificationForm) {
+        if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_NEW_MOVIE)) {
+            try {
+                MovieNotificationDto movie = objectMapper.readValue(sendNotificationForm.getBody(), MovieNotificationDto.class);
+                sendNotificationForm.setMessage(String.format("\"%s\" đã lên sóng - Xem ngay kẻo lỡ!", movie.getTitle()));
+                sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + movie.getThumbnailUrl());
+            } catch (Exception e) {
+                log.warn("Failed to parse movie data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_NEW_MOVIE_ITEM)) {
+            try {
+                MovieItemNotificationDto movieItem = objectMapper.readValue(sendNotificationForm.getBody(), MovieItemNotificationDto.class);
+                sendNotificationForm.setMessage(String.format("\"%s\" vừa có nội dung mới: %s - Xem ngay kẻo lỡ!", movieItem.getMovie().getTitle(), movieItem.getTitle()));
+                String imageUrl = movieItem.getThumbnailUrl() != null ? movieItem.getThumbnailUrl() : movieItem.getMovie().getThumbnailUrl();
+                sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + imageUrl);
+            } catch (Exception e) {
+                log.warn("Failed to parse movie item data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_REPLY_COMMENT)) {
+            try {
+                CommentNotificationDto comment = objectMapper.readValue(sendNotificationForm.getBody(), CommentNotificationDto.class);
+                String message = String.format("%s đã trả lời bình luận của bạn: %s", comment.getAuthor().getFullName(), comment.getContent());
+                sendNotificationForm.setMessage(message);
+            } catch (Exception e) {
+                log.warn("Failed to parse comment data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_VOTE_COMMENT)) {
+            try {
+                CommentNotificationDto comment = objectMapper.readValue(sendNotificationForm.getBody(), CommentNotificationDto.class);
+                String action = Objects.equals(comment.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
+                        ? "đã thích"
+                        : "đã không thích";
+                String message = String.format("%s %s bình luận của bạn: %s", comment.getAuthor().getFullName(), action, comment.getContent());
+                sendNotificationForm.setMessage(message);
+            } catch (Exception e) {
+                log.warn("Failed to parse comment vote data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_VOTE_REVIEW)) {
+            try {
+                ReviewNotificationDto review = objectMapper.readValue(sendNotificationForm.getBody(), ReviewNotificationDto.class);
+                String action = Objects.equals(review.getReactionType(), BaseConstant.REACTION_TYPE_LIKE)
+                        ? "đã thích"
+                        : "đã không thích";
+                String message = String.format("%s %s đánh giá của bạn: %s", review.getAuthor().getFullName(), action, review.getContent());
+                sendNotificationForm.setMessage(message);
+            } catch (Exception e) {
+                log.warn("Failed to parse review vote data for notification message: {}", e.getMessage());
+            }
+        }
+    }
+
+    private <T> String serializeNotificationBody(T body) {
+        try {
+            return body != null ? objectMapper.writeValueAsString(body) : null;
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize notification body", e);
+        }
     }
 
     private List<Account> resolveTargetAccounts(Integer targetType, String targetValue) {

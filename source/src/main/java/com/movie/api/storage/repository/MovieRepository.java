@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecificationExecutor<Movie> {
     Optional<Movie> findByIdAndStatus(Long id, Integer status);
 
+    List<Movie> findAllByIdInAndStatus(List<Long> ids, Integer status);
+
     boolean existsByCategories_Id(Long categoryId);
 
     /**

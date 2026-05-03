@@ -1,6 +1,7 @@
 package com.movie.api.storage.repository;
 
 import com.movie.api.storage.model.UserMovie;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -23,6 +24,11 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
     void deleteByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
 
     List<UserMovie> findByUserId(Long userId);
+
+    List<UserMovie> findByUserIdAndTypeOrderByModifiedDateDesc(Long userId, Integer type, Pageable pageable);
+
+    @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
+    List<Long> findMovieIdsByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
 
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 
