@@ -1,5 +1,6 @@
 package com.movie.api.storage.repository;
 
+import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.model.UserMovie;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,6 +30,9 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
 
     @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
     List<Long> findMovieIdsByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
+
+    @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
+    List<Movie> findAllByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type, Pageable pageable);
 
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 

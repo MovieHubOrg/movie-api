@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,4 +61,12 @@ public interface FavouriteRepository extends JpaRepository<Favourite, Long>, Jpa
             ")"
     )
     List<Long> findFavouritePersonIds(@Param("userId") Long userId, @Param("movieId") Long movieId);
+
+    @Query("select count(f) from Favourite f " +
+            "where f.status = :status " +
+            "and (:fromDate is null or f.createdDate >= :fromDate) " +
+            "and (:toDate is null or f.createdDate <= :toDate)")
+    Long countByStatusAndCreatedDateBetween(@Param("status") Integer status,
+                                            @Param("fromDate") Date fromDate,
+                                            @Param("toDate") Date toDate);
 }

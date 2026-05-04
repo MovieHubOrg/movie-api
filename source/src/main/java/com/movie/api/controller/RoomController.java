@@ -260,10 +260,10 @@ public class RoomController extends ABasicController {
     public ApiMessageDto<Void> delete(@PathVariable Long id) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Room] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
-        if (!isAdmin() || !Objects.equals(room.getHost().getId(), getCurrentUser())) {
+        if (!isAdmin() && !Objects.equals(room.getHost().getId(), getCurrentUser())) {
             throw new UnauthorizationException("Not allow");
         }
-        if (!Objects.equals(room.getState(), BaseConstant.ROOM_STATE_ENDING)) {
+        if (Objects.equals(room.getState(), BaseConstant.ROOM_STATE_RUNNING)) {
             throw new BadRequestException("[Room] room state invalid", ErrorCode.ROOM_ERROR_INVALID_STATE);
         }
 

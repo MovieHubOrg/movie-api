@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,4 +43,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     boolean existsByAuthorIdAndMovieId(Long authorId, Long movieId);
 
     Optional<Review> findByAuthorIdAndMovieId(Long authorId, Long movieId);
+
+    @Query("select count(r) from Review r " +
+            "where r.status = :status " +
+            "and (:fromDate is null or r.createdDate >= :fromDate) " +
+            "and (:toDate is null or r.createdDate <= :toDate)")
+    Long countByStatusAndCreatedDateBetween(@Param("status") Integer status,
+                                            @Param("fromDate") Date fromDate,
+                                            @Param("toDate") Date toDate);
 }

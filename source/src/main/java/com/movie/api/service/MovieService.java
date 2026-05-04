@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.movie.MovieDto;
+import com.movie.api.dto.movie.RecentWatchedCategoryRecommendationDto;
 import com.movie.api.dto.review.ReviewStatisticsDto;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.movie.FilterMovieForm;
 import com.movie.api.form.movie.MovieMetadataForm;
+import com.movie.api.mapper.CategoryMapper;
 import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.service.redis.RedisService;
@@ -19,11 +21,14 @@ import com.movie.api.storage.model.MovieItem;
 import com.movie.api.storage.model.UserMovie;
 import com.movie.api.storage.repository.MovieRepository;
 import com.movie.api.storage.repository.UserMovieRepository;
+import com.movie.api.storage.repository.WatchHistoryRepository;
+import com.movie.api.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Function;
@@ -39,6 +44,9 @@ public class MovieService {
     private MovieMapper movieMapper;
 
     @Autowired
+    private CategoryMapper categoryMapper;
+
+    @Autowired
     private RedisService redisService;
 
     @Autowired
@@ -49,6 +57,9 @@ public class MovieService {
 
     @Autowired
     private UserMovieRepository userMovieRepository;
+
+    @Autowired
+    private WatchHistoryRepository watchHistoryRepository;
 
     /**
      * Calculate reviewCount và averageRating for Movie.
@@ -228,8 +239,7 @@ public class MovieService {
         String key = redisService.buildKey(
                 "movie",
                 "recommendation",
-                userId.toString(),
-                String.valueOf(recommendationLimit)
+                userId.toString()
         );
         List<MovieDto> cachedMovies = redisService.get(key, new TypeReference<>() {
         });
@@ -258,8 +268,79 @@ public class MovieService {
         excludedMovieIds.addAll(favouriteMovieIds);
 
         List<MovieDto> recommendedMovies = findSuggestedMovies(favouriteMovies, excludedMovieIds, recommendationLimit);
-        redisService.put(key, recommendedMovies, 5 * 60);
+        redisService.put(key, recommendedMovies, 30 * 60); // cache 30 minutes
         return recommendedMovies;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecentWatchedCategoryRecommendationDto> getRecentWatchedCategoryRecommendationsForUser(Long userId, int categoryLimit, int movieLimit) {
+        int recommendationCategoryLimit = categoryLimit > 0 ? categoryLimit : 5;
+        int recommendationMovieLimit = movieLimit > 0 ? movieLimit : 10;
+        String key = redisService.buildKey(
+                "movie",
+                "recommendation",
+                "recent-watched-category",
+                userId.toString()
+        );
+        List<RecentWatchedCategoryRecommendationDto> cachedRecommendations = redisService.get(key, new TypeReference<>() {
+        });
+        if (cachedRecommendations != null) {
+            return cachedRecommendations;
+        }
+
+        List<Movie> recentWatchedMovies = watchHistoryRepository.findWatchedMoviesByUserOrderByDate(userId, PageRequest.of(0, 3));
+        if (recentWatchedMovies.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> excludedMovieIds = recentWatchedMovies
+                .stream()
+                .map(Movie::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (excludedMovieIds.isEmpty()) {
+            excludedMovieIds.add(-1L);
+        }
+
+        Map<Long, CategoryRecommendationSignal> categorySignals = new LinkedHashMap<>();
+        for (int index = 0; index < recentWatchedMovies.size(); index++) {
+            Movie movie = recentWatchedMovies.get(index);
+            if (movie.getCategories() == null) {
+                continue;
+            }
+            int recencyScore = recentWatchedMovies.size() - index;
+            for (Category category : movie.getCategories()) {
+                if (category == null || category.getId() == null) {
+                    continue;
+                }
+                CategoryRecommendationSignal signal = categorySignals.computeIfAbsent(
+                        category.getId(),
+                        id -> new CategoryRecommendationSignal(category)
+                );
+                signal.addScore(recencyScore);
+            }
+        }
+
+        List<RecentWatchedCategoryRecommendationDto> recommendations = categorySignals.values().stream()
+                .sorted(Comparator.comparing(CategoryRecommendationSignal::getScore).reversed())
+                .limit(recommendationCategoryLimit)
+                .map(signal -> {
+                    List<Movie> movies = movieRepository.findRecommendationByCategory(
+                            signal.getCategory().getId(),
+                            excludedMovieIds,
+                            PageRequest.of(0, recommendationMovieLimit)
+                    );
+                    RecentWatchedCategoryRecommendationDto dto = new RecentWatchedCategoryRecommendationDto();
+                    dto.setCategory(categoryMapper.entityToCategoryAutoCompleteDto(signal.getCategory()));
+                    dto.setMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies));
+                    return dto;
+                })
+                .filter(dto -> dto.getMovies() != null && !dto.getMovies().isEmpty())
+                .collect(Collectors.toList());
+
+        redisService.put(key, recommendations, 30 * 60); // cache 30 minutes
+        return recommendations;
     }
 
     public List<MovieDto> findSuggestedMovies(List<Movie> movies, Set<Long> excludedMovieIds, int limit) {
@@ -303,6 +384,27 @@ public class MovieService {
                 .collect(Collectors.toList());
     }
 
+    private static class CategoryRecommendationSignal {
+        private final Category category;
+        private int score;
+
+        private CategoryRecommendationSignal(Category category) {
+            this.category = category;
+        }
+
+        private Category getCategory() {
+            return category;
+        }
+
+        private int getScore() {
+            return score;
+        }
+
+        private void addScore(int value) {
+            score += value;
+        }
+    }
+
     public void updateMetaDataMovie(MovieItem movieItem) {
         Movie movie = movieItem.getMovie();
         try {
@@ -333,7 +435,7 @@ public class MovieService {
     }
 
     public void resetMetaDataMovie(Movie movie) {
-        if (movie.getMetadata() != null && !movie.getMetadata().isEmpty()) {
+        if (!StringUtils.isNullOrEmpty(movie.getMetadata())) {
             try {
                 if (Objects.equals(movie.getType(), BaseConstant.MOVIE_TYPE_SINGLE)) {
                     movie.setMetadata(null);
@@ -352,7 +454,7 @@ public class MovieService {
 
     public void clearLatestMetadata(Movie movie, boolean clearLatestSeason, boolean clearLatestEpisode) {
         try {
-            MovieMetadataForm metadata = (movie.getMetadata() != null && !movie.getMetadata().isEmpty())
+            MovieMetadataForm metadata = (!StringUtils.isNullOrEmpty(movie.getMetadata()))
                     ? objectMapper.readValue(movie.getMetadata(), MovieMetadataForm.class)
                     : new MovieMetadataForm();
 

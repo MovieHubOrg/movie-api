@@ -7,6 +7,7 @@ import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.movie.MovieNotificationDto;
+import com.movie.api.dto.movie.RecentWatchedCategoryRecommendationDto;
 import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.dto.watchHistory.WatchHistoryDto;
@@ -168,7 +169,7 @@ public class MovieController extends ABasicController {
 
     @GetMapping(value = "/admin/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_V')")
-    public ApiMessageDto<MovieDto> adminGet(@PathVariable("id") Long id) {
+    public ApiMessageDto<MovieDto> adminGet(@PathVariable Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
 
@@ -176,12 +177,11 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<MovieDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<MovieDto> get(@PathVariable Long id) {
         // key -> {movie}::{id}
         String key = redisService.buildKey("movie", id.toString());
         MovieDto movieDto = redisService.get(key, MovieDto.class);
         if (movieDto != null) {
-            redisService.refreshTTL(key, 5 * 60);
             return makeSuccessResponse(movieDto, "Get movie success");
         }
 
@@ -310,7 +310,7 @@ public class MovieController extends ABasicController {
         if (BaseConstant.MOVIE_TYPE_SERIES.equals(movie.getType()) && form.getDuration() != null) {
             MovieMetadataForm metadata = new MovieMetadataForm();
             try {
-                if (!movie.getMetadata().isEmpty()) {
+                if (!StringUtils.isNullOrEmpty(movie.getMetadata())) {
                     metadata = objectMapper.readValue(movie.getMetadata(), MovieMetadataForm.class);
                 }
                 metadata.setDuration(form.getDuration());
@@ -412,8 +412,8 @@ public class MovieController extends ABasicController {
      */
     @GetMapping(value = "/suggest-by-watched", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "page") Integer page) {
-        if (page < 0 || page > 2) {
-            return makeSuccessResponse(null, "Page must be between 0 and 2");
+        if (page < 0 || page > 1) {
+            return makeSuccessResponse(null, "Page must be between 0 and 1");
         }
 
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
@@ -440,6 +440,14 @@ public class MovieController extends ABasicController {
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
         return makeSuccessResponse(movieService.getRecommendationsForUser(user.getId(), 20), "List recommendation movie success");
+    }
+
+    @GetMapping(value = "/recommendation/recent-watched-category", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<RecentWatchedCategoryRecommendationDto>> recentWatchedCategoryRecommendation() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 5, 10), "List recent watched recommendation movie success");
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)

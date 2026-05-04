@@ -54,6 +54,9 @@ This is a service reserved for authentication and authorization based on Oauth2 
 
    Ex: ```docker run -it -p 8080:8080 -e "SPRING_PROFILES_ACTIVE=dev" user-service-be-v1.0```
 
+## API documents
+- [Statistic API documentation for frontend](docs/statistic-api.vi.md)
+
 
 ## Contact point
 If you have any problem when rebuild application feel free to contact persons in below:
