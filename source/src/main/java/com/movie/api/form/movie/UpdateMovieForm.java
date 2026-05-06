@@ -10,6 +10,7 @@ import lombok.Setter;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import java.util.Date;
 import java.util.List;
 
@@ -65,6 +66,10 @@ public class UpdateMovieForm {
     @NotNull(message = "year cannot be null")
     @ApiModelProperty(required = true)
     private Integer year;
+
+    @Pattern(regexp = "^$|^tt\\d{7,12}$", message = "imdbId is invalid")
+    @ApiModelProperty
+    private String imdbId;
 
     @Min(1)
     @ApiModelProperty

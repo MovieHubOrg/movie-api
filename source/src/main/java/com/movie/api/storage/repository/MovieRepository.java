@@ -21,6 +21,8 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
 
     List<Movie> findAllByIdInAndStatus(List<Long> ids, Integer status);
 
+    List<Movie> findAllByImdbIdIsNotNull();
+
     boolean existsByCategories_Id(Long categoryId);
 
     /**

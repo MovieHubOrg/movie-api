@@ -35,6 +35,7 @@ public class BaseConstant {
     public static final String HEADER_CLIENT_TYPE = "X-Client-Type";
     public static final String HEADER_CLIENT_TYPE_WEB = "WEB";
     public static final String HEADER_X_API_KEY = "X-Api-Key";
+    public static final String HEADER_BYPASS = "True";
 
     public static final String DOWNLOAD_MEDIA_API = "https://media-api.moviehub.biz/v1/file/download";
 

@@ -29,6 +29,8 @@ public class FilterMovieForm {
 
     private Boolean comingSoon;
 
+    private Boolean topImdb;
+
     @Min(value = 1)
     private Integer limit;
 }

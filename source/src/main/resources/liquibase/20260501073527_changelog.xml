@@ -5,4 +5,14 @@
             <column name="last_time_online" type="datetime" afterColumn="state"/>
         </addColumn>
     </changeSet>
+    <changeSet author="Movie" id="1778050297450-1">
+        <addColumn tableName="db_movie">
+            <column name="imdb_id" type="varchar(20)" afterColumn="metadata"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1778050297450-2">
+        <addColumn tableName="db_movie">
+            <column name="imdb_rating" type="double precision" afterColumn="imdb_id"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

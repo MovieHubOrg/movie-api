@@ -127,4 +127,8 @@ public class RedisService {
     public void refreshTTL(String key, int ttl) {
         redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
     }
+
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
 }

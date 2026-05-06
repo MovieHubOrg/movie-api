@@ -32,6 +32,11 @@ This is a service reserved for authentication and authorization based on Oauth2 
     app.rabbitmq.exchange.topic.userEvent=User_Event
     app.rabbitmq.queue.new.user=new_user
     ```
+- OMDb config
+    ```
+    OMDB_API_KEY=<omdb api key>
+    omdb.api.url=https://www.omdbapi.com/
+    ```
 
 - Initial data
   Currently all initial data will define on `/resource/data.sql`

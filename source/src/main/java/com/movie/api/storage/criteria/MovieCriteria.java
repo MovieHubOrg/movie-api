@@ -29,6 +29,8 @@ public class MovieCriteria {
     private String keyword;
     private List<Long> excludeIds;
     private Boolean comingSoon;
+    private Boolean hasImdbRating;
+    private Boolean topImdb;
 
     public Specification<Movie> getSpecification() {
         return new Specification<Movie>() {
@@ -105,6 +107,18 @@ public class MovieCriteria {
 
                 if (Boolean.TRUE.equals(getComingSoon())) {
                     predicates.add(cb.greaterThan(root.get("releaseDate"), new Date()));
+                }
+
+                if (Boolean.TRUE.equals(getHasImdbRating())) {
+                    predicates.add(cb.isNotNull(root.get("imdbRating")));
+                } else if (Boolean.FALSE.equals(getHasImdbRating())) {
+                    predicates.add(cb.isNull(root.get("imdbRating")));
+                }
+
+                if (Boolean.TRUE.equals(getTopImdb())) {
+                    predicates.add(cb.isNotNull(root.get("imdbRating")));
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("imdbRating"), 7.0));
+                    query.orderBy(cb.desc(root.get("imdbRating")));
                 }
                 return cb.and(predicates.toArray(new Predicate[predicates.size()]));
             }

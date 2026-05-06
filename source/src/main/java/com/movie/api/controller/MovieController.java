@@ -5,6 +5,7 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
+import com.movie.api.dto.movie.ImdbRatingsSyncDto;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.movie.MovieNotificationDto;
 import com.movie.api.dto.movie.RecentWatchedCategoryRecommendationDto;
@@ -23,6 +24,7 @@ import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.WatchHistoryMapper;
 import com.movie.api.service.MediaService;
+import com.movie.api.service.ImdbService;
 import com.movie.api.service.MovieService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.service.feign.FeignAccountAuthService;
@@ -131,10 +133,16 @@ public class MovieController extends ABasicController {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private ImdbService imdbService;
+
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateMovieForm form) {
         Movie movie = movieMapper.fromCreateMovieFormToEntity(form);
+        if (!StringUtils.isNullOrEmpty(form.getImdbId())) {
+            movie.setImdbRating(imdbService.fetchRating(form.getImdbId()));
+        }
 
         if (form.getCategoryIds() != null && !form.getCategoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(form.getCategoryIds());
@@ -283,6 +291,7 @@ public class MovieController extends ABasicController {
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateMovieForm form) {
         Movie movie = movieRepository.findById(form.getId())
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        String previousImdbId = movie.getImdbId();
 
         if (!Objects.equals(movie.getTitle(), form.getTitle())) {
             movie.setSlug(StringUtils.slugify(form.getTitle()));
@@ -307,6 +316,10 @@ public class MovieController extends ABasicController {
         mediaService.deleteFiles(deletedFiles);
 
         movieMapper.fromUpdateMovieFormToEntity(form, movie);
+        boolean imdbRatingChanged = !Objects.equals(previousImdbId, movie.getImdbId());
+        if (imdbRatingChanged) {
+            movie.setImdbRating(imdbService.fetchRating(form.getImdbId()));
+        }
         if (BaseConstant.MOVIE_TYPE_SERIES.equals(movie.getType()) && form.getDuration() != null) {
             MovieMetadataForm metadata = new MovieMetadataForm();
             try {
@@ -326,6 +339,17 @@ public class MovieController extends ABasicController {
         redisService.deleteByPrefix(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
         redisService.deleteByPrefix(redisService.buildKey("movie", "recommendation"));
         return makeSuccessResponse("Update movie success");
+    }
+
+    @PostMapping(value = "/admin/imdb-ratings/sync", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('MOV_U')")
+    @ApiIgnore
+    public ApiMessageDto<ImdbRatingsSyncDto> syncImdbRatings() {
+        try {
+            return makeSuccessResponse(imdbService.syncAllMovieRatings(), "Sync IMDb ratings success");
+        } catch (Exception ex) {
+            throw new BadRequestException("Failed to sync IMDb ratings: " + ex.getMessage());
+        }
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
