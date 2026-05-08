@@ -16,7 +16,7 @@ import java.util.Date;
 public class SendNotificationConfigForm {
     @NotNull(message = "isSendNotification cannot be null")
     @ApiModelProperty(required = true)
-    private Boolean isSendNotification;
+    private Boolean isSendNotification = false;
 
     private Date scheduleAt = new Date();
 

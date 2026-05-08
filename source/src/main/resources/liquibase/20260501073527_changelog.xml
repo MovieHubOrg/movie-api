@@ -15,4 +15,9 @@
             <column name="imdb_rating" type="double precision" afterColumn="imdb_id"/>
         </addColumn>
     </changeSet>
+    <changeSet author="Movie" id="1778166874419-1">
+        <addColumn tableName="db_video_library">
+            <column name="reason" type="varchar(255)" afterColumn="state"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

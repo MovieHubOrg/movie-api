@@ -71,6 +71,7 @@ public interface MovieMapper {
     @Mapping(source = "imdbId", target = "imdbId")
     @Mapping(source = "imdbRating", target = "imdbRating")
     @Mapping(source = "metadata", target = "metadata")
+    @Mapping(source = "status", target = "status")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToMovieAutoCompleteDto")
     MovieDto entityToMovieAutoCompleteDto(Movie movie);

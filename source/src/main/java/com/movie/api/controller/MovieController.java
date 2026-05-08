@@ -152,7 +152,7 @@ public class MovieController extends ABasicController {
         movie.setSlug(StringUtils.slugify(form.getTitle()));
         movieRepository.save(movie);
 
-        if (Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
+        if (form.getSendNotificationConfig() != null && Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
             MovieNotificationDto data = movieMapper.entityToMovieNotificationDto(movie);
             SendNotificationConfigForm sendNotificationConfig = form.getSendNotificationConfig();
             String title = !StringUtils.isNullOrEmpty(sendNotificationConfig.getTitle())
