@@ -48,7 +48,10 @@ public class VideoLibrary extends Auditable<String> {
     @Column(name = "outro_start")
     private Long outroStart;
 
-    private Integer state; // 0: PROCESSING, 1: READY
+    private Integer state; // 0: PROCESSING, 1: READY, 2: ERROR
+
+    @Column(name = "reason")
+    private String reason;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "server_config_id")

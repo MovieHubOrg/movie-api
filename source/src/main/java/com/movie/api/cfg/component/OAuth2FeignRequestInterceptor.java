@@ -20,6 +20,7 @@ public class OAuth2FeignRequestInterceptor implements RequestInterceptor { // cá
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String HEADER_X_API_KEY = "X-Api-Key";
+    public static final String HEADER_BYPASS = "Bypass";
     private static final String BEARER_TOKEN_TYPE = "Bearer";
     private static final String BASIC_AUTH_TYPE = "Basic";
 
@@ -43,8 +44,10 @@ public class OAuth2FeignRequestInterceptor implements RequestInterceptor { // cá
                 log.error("-----------> not found type = " + template.headers().get(FeignAccountAuthService.LOGIN_TYPE).toArray()[0]);
             }
             template.removeHeader(FeignAccountAuthService.LOGIN_TYPE);
-        } else {
-            if (!template.headers().containsKey(AUTHORIZATION_HEADER) && !template.headers().containsKey(HEADER_X_API_KEY)) {
+        } else if (template.headers().containsKey(HEADER_BYPASS)) {
+            template.removeHeader(HEADER_BYPASS);
+        }else {
+            if (!template.headers().containsKey(AUTHORIZATION_HEADER) && !template.headers().containsKey(HEADER_X_API_KEY) && !template.headers().containsKey(HEADER_X_API_KEY)) {
                 log.error("-----------> Constructing Header {} for Token {}, token {}", AUTHORIZATION_HEADER, BEARER_TOKEN_TYPE, String.format("%s %s", BEARER_TOKEN_TYPE, userService.AUTH_SERVER_TOKEN));
                 template.header(AUTHORIZATION_HEADER, String.format("%s %s", BEARER_TOKEN_TYPE, userService.getToken()));
             }

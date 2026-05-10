@@ -11,7 +11,9 @@ import lombok.Setter;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import java.util.Date;
 import java.util.List;
 
@@ -64,6 +66,13 @@ public class CreateMovieForm {
     @ApiModelProperty(required = true)
     private Integer year;
 
+    @Pattern(regexp = "^$|^tt\\d{7,12}$", message = "imdbId is invalid")
+    @ApiModelProperty
+    private String imdbId;
+
+    @NotNull(message = "categoryIds cannot be null")
+    @NotEmpty(message = "categoryIds cannot be empty")
+    @ApiModelProperty(required = true)
     private List<@NotNull Long> categoryIds;
 
     @StatusConstraint

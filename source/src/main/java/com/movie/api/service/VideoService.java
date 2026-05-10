@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -52,8 +52,13 @@ public class VideoService {
         log.warn("End updating video ID: {}", form.getId());
 
         VideoLibraryNotificationDto data = videoLibraryMapper.entityToVideoLibraryDtoNotification(videoLibrary);
-        notificationService.sendToApp(BaseConstant.APP_CMS, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.MQTT_QOS_LEVEL_0);
-        String title = String.format("Video \"%s\" đã xử lý xong", videoLibrary.getName());
-        notificationService.createNotificationTemplate(title, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS, new Date());
+        String title;
+        if (Objects.equals(videoLibrary.getState(), BaseConstant.VIDEO_LIBRARY_STATE_ERROR)) {
+            title = String.format("Video \"%s\" xử lý lỗi", videoLibrary.getName());
+            data.setReason(title);
+        } else {
+            title = String.format("Video \"%s\" đã xử lý xong", videoLibrary.getName());
+        }
+        notificationService.sendNotificationMessage(title, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
     }
 }

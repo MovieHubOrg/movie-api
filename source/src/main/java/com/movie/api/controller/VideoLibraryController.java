@@ -9,6 +9,7 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.video.CreateVideoLibraryForm;
 import com.movie.api.form.video.ExternalVideoLibraryForm;
+import com.movie.api.form.video.RetryProcessVideoLibraryForm;
 import com.movie.api.form.video.UpdateVideoLibraryForm;
 import com.movie.api.mapper.VideoLibraryMapper;
 import com.movie.api.service.rabbit.RabbitService;
@@ -96,7 +97,7 @@ public class VideoLibraryController extends ABasicController {
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('VID_L_V')")
-    public ApiMessageDto<VideoLibraryDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<VideoLibraryDto> get(@PathVariable Long id) {
         VideoLibrary videoLibrary = videoLibraryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Video Library] Not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
         return makeSuccessResponse(videoLibraryMapper.entityToVideoLibraryDto(videoLibrary), "Get video library success");
@@ -140,6 +141,44 @@ public class VideoLibraryController extends ABasicController {
 
         videoLibraryRepository.save(videoLibrary);
         return makeSuccessResponse("Update video library success");
+    }
+
+    @PutMapping(value = "/retry-process", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('VID_L_U')")
+    public ApiMessageDto<Void> retryProcess(@Valid @RequestBody RetryProcessVideoLibraryForm form) {
+        VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getId())
+                .orElseThrow(() -> new NotFoundException("[Video Library] Not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
+
+        if (!Objects.equals(videoLibrary.getSourceType(), BaseConstant.SOURCE_TYPE_INTERNAL)) {
+            throw new BadRequestException("Cannot retry process for external source");
+        }
+        if (!Objects.equals(videoLibrary.getState(), BaseConstant.VIDEO_LIBRARY_STATE_ERROR)) {
+            throw new BadRequestException("invalid state to retry process, only video library in error state can be retried");
+        }
+        if (videoLibrary.getServerConfig() == null) {
+            throw new BadRequestException("Cannot retry process because server config is null");
+        }
+
+        videoLibrary.setContent(form.getContent());
+        videoLibrary.setState(BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING);
+        videoLibrary.setReason(null);
+        videoLibraryRepository.save(videoLibrary);
+
+        VideoLibraryDto data = new VideoLibraryDto();
+        data.setId(videoLibrary.getId());
+        data.setContent(videoLibrary.getContent());
+
+        String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + convertVideoQueue;
+        rabbitService.handleSendMsg(
+                appName,
+                queueName,
+                data,
+                BaseConstant.CMD_CONVERT_VIDEO,
+                null,
+                null,
+                null
+        );
+        return makeSuccessResponse("Retry process video library success");
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

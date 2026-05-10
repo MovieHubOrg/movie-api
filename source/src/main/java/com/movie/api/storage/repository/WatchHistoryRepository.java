@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,13 +69,31 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
     @Query("update WatchHistory wh set wh.status = :statusDelete where wh.user.id = :userId and wh.movie.id = :movieId")
     void softDeleteByUserIdAndMovieId(@Param("statusDelete") Integer statusDelete, @Param("userId") Long userId, @Param("movieId") Long movieId);
 
-    @Query("SELECT wh FROM WatchHistory wh " +
+    @Query("SELECT movie FROM WatchHistory wh " +
+            "JOIN wh.movie movie " +
             "WHERE wh.user.id = :userId " +
             "AND wh.movieItem IS NULL " +
-            "AND wh.isCompleted = true " +
+            "AND (wh.isCompleted = true OR COALESCE(wh.timesWatched, 0) > 0) " +
             "AND wh.status = 1 " +
             "ORDER BY wh.modifiedDate DESC")
-    List<WatchHistory> findCompletedMoviesByUserOrderByDate(
+    List<Movie> findWatchedMoviesByUserOrderByDate(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
+    @Query("SELECT wh.movie FROM WatchHistory wh " +
+            "WHERE wh.user.id = :userId " +
+            "AND wh.movie IS NOT NULL " +
+            "AND wh.status = 1 " +
+            "AND wh.modifiedDate = ( " +
+            "    SELECT MAX(wh2.modifiedDate) " +
+            "    FROM WatchHistory wh2 " +
+            "    WHERE wh2.user.id = wh.user.id " +
+            "    AND wh2.movie.id = wh.movie.id " +
+            "    AND wh2.status = 1 " +
+            ") " +
+            "ORDER BY wh.modifiedDate DESC")
+    List<Movie> findRecentMoviesByUserOrderByDate(
             @Param("userId") Long userId,
             Pageable pageable
     );
@@ -84,4 +103,13 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
             "AND wh.movie IS NOT NULL " +
             "AND wh.status = 1")
     List<Long> findAllWatchedMovieIds(@Param("userId") Long userId);
+
+    @Query("select coalesce(sum(wh.timesWatched), 0) from WatchHistory wh " +
+            "where wh.status = :status " +
+            "and wh.movieItem is null " +
+            "and (:fromDate is null or wh.modifiedDate >= :fromDate) " +
+            "and (:toDate is null or wh.modifiedDate <= :toDate)")
+    Long sumTimesWatchedByModifiedDateBetween(@Param("status") Integer status,
+                                              @Param("fromDate") Date fromDate,
+                                              @Param("toDate") Date toDate);
 }

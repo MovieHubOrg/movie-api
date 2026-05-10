@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long>, JpaSpecificationExecutor<Comment> {
@@ -71,4 +72,12 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, JpaSpec
             "JOIN Reaction r ON c.id = r.commentId " +
             "WHERE c.movieId = :movieId AND r.userId = :userId")
     List<VoteDto> findVotesByMovieIdAndUserId(@Param("movieId") Long movieId, @Param("userId") Long userId);
+
+    @Query("select count(c) from Comment c " +
+            "where c.status = :status " +
+            "and (:fromDate is null or c.createdDate >= :fromDate) " +
+            "and (:toDate is null or c.createdDate <= :toDate)")
+    Long countByStatusAndCreatedDateBetween(@Param("status") Integer status,
+                                            @Param("fromDate") Date fromDate,
+                                            @Param("toDate") Date toDate);
 }

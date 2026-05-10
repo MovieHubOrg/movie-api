@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.movieItem.MovieItemDto;
+import com.movie.api.dto.movieItem.MovieItemNotificationDto;
 import com.movie.api.form.movieItem.CreateMovieItemForm;
 import com.movie.api.form.movieItem.UpdateMovieItemForm;
 import com.movie.api.storage.model.MovieItem;
@@ -12,7 +13,6 @@ import java.util.List;
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
         uses = {MovieMapper.class, VideoLibraryMapper.class})
 public interface MovieItemMapper {
-
     @Mapping(source = "id", target = "id")
     @Mapping(source = "title", target = "title")
     @Mapping(source = "description", target = "description")
@@ -127,11 +127,21 @@ public interface MovieItemMapper {
     @Mapping(source = "kind", target = "kind")
     @Mapping(source = "label", target = "label")
     @Mapping(source = "movie", target = "movie", qualifiedByName = "entityToMovieRoomDto")
-    @Mapping(source = "video", target = "video", qualifiedByName = "entityToVideoLibraryShortDto")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToMovieItemRoomDto")
     MovieItemDto entityToMovieItemRoomDto(MovieItem movieItem);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "kind", target = "kind")
+    @Mapping(source = "label", target = "label")
+    @Mapping(source = "movie", target = "movie", qualifiedByName = "entityToMovieNotificationDto")
+    @Mapping(source = "releaseDate", target = "releaseDate")
+    @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToMovieItemNotificationDto")
+    MovieItemNotificationDto entityToMovieItemNotificationDto(MovieItem movieItem);
 
     @Mapping(source = "title", target = "title")
     @Mapping(source = "description", target = "description")

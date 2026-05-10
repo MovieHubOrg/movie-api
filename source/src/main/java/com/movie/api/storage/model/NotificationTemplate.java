@@ -27,10 +27,10 @@ public class NotificationTemplate extends Auditable<String> {
 
     private Integer type;
 
-    private Integer targetType; // 1: app, 2: specific accounts
+    private Integer targetType; // 1: app, 2: specific accounts, 3: segment
 
     @Column(columnDefinition = "LONGTEXT")
-    private String targetValue; // 1: cms, 2: app, 3: accountIds (1,1,1)
+    private String targetValue; // app name, accountIds, or segment marker
 
     private Date scheduleAt;
 }

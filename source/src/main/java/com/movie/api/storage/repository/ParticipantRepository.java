@@ -16,7 +16,10 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long>,
 
     Optional<Participant> findByRoomIdAndUserId(Long roomId, Long userId);
 
-    List<Participant> findAllByRoom_IdAndUser_IdInAndStatus(Long roomId, List<Long> userIds, Integer status);
+    @Query("SELECT p FROM Participant p " +
+            "WHERE p.room.id = :roomId " +
+            "AND p.user.id IN :userIds")
+    List<Participant> findAllByRoomIdAndUserIdIn(@Param("roomId") Long roomId, @Param("userIds") List<Long> userIds);
 
     @Modifying
     @Transactional

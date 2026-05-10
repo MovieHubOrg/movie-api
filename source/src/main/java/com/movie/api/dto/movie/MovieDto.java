@@ -33,6 +33,8 @@ public class MovieDto extends ABasicAdminDto {
     private Long commentCount;
     private Long reviewCount;
     private Double averageRating;
+    private String imdbId;
+    private Double imdbRating;
     private String metadata;
     private List<MovieItemDto> seasons;
 }

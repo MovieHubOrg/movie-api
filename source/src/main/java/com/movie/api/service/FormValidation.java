@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.form.ErrorForm;
-import com.movie.api.form.room.CreateChatForm;
-import com.movie.api.form.room.ParticipantLeftForm;
+import com.movie.api.form.room.mqtt.ClientPingForm;
+import com.movie.api.form.room.mqtt.CreateChatForm;
+import com.movie.api.form.room.mqtt.ParticipantLeftForm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class FormValidation {
     private static final Map<String, Class<?>> FORM_MAPS = new HashMap<>() {{
         put(BaseConstant.CMD_PARTICIPANT_LEFT, ParticipantLeftForm.class);
         put(BaseConstant.CMD_CREATE_CHAT, CreateChatForm.class);
+        put(BaseConstant.CMD_CLIENT_PING, ClientPingForm.class);
     }};
 
     private <T> List<ErrorForm> validate(T form) {

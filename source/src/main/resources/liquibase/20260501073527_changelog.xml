@@ -1,0 +1,23 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1777620942194-1">
+        <addColumn tableName="db_room">
+            <column name="last_time_online" type="datetime" afterColumn="state"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1778050297450-1">
+        <addColumn tableName="db_movie">
+            <column name="imdb_id" type="varchar(20)" afterColumn="metadata"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1778050297450-2">
+        <addColumn tableName="db_movie">
+            <column name="imdb_rating" type="double precision" afterColumn="imdb_id"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1778166874419-1">
+        <addColumn tableName="db_video_library">
+            <column name="reason" type="varchar(255)" afterColumn="state"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

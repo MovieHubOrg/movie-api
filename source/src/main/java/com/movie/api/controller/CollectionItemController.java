@@ -1,5 +1,6 @@
 package com.movie.api.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
@@ -12,6 +13,7 @@ import com.movie.api.form.UpdateOrderingForm;
 import com.movie.api.form.collectionItem.CreateCollectionItemForm;
 import com.movie.api.form.movie.FilterMovieForm;
 import com.movie.api.mapper.CollectionItemMapper;
+import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.CollectionItemCriteria;
 import com.movie.api.storage.model.Collection;
 import com.movie.api.storage.model.CollectionItem;
@@ -39,6 +41,8 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @Slf4j
 public class CollectionItemController extends ABasicController {
+    private static final int COLLECTION_ITEM_LIST_CACHE_TTL = 5 * 60;
+
     @Autowired
     private CollectionRepository collectionRepository;
 
@@ -53,6 +57,9 @@ public class CollectionItemController extends ABasicController {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private RedisService redisService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('COL_I_C')")
@@ -87,6 +94,7 @@ public class CollectionItemController extends ABasicController {
         int ordering = collectionItemRepository.findMaxOrdering(collection.getId()).map(o -> o + 1).orElse(0);
         collectionItem.setOrdering(ordering);
         collectionItemRepository.save(collectionItem);
+        clearCollectionItemListCache(collection.getId());
         return makeSuccessResponse("Create collection item success");
     }
 
@@ -107,16 +115,29 @@ public class CollectionItemController extends ABasicController {
         criteria.setCollectionId(collectionId);
         pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(new Sort.Order(Sort.Direction.ASC, "ordering")));
 
+        String key = buildCollectionItemListCacheKey(collectionId, pageable);
+        ResponseListDto<List<MovieDto>> cached = redisService.get(key, new TypeReference<>() {
+        });
+        if (cached != null) {
+            return makeSuccessResponse(cached, "List collection success");
+        }
+
         Page<CollectionItem> collectionItems = collectionItemRepository.findAll(criteria.getSpecification(), pageable);
-        return makeSuccessResponse(makeResponseListDto(collectionItems, collectionItemMapper::collectionItemsToMovieDtos), "List collection success");
+        ResponseListDto<List<MovieDto>> response = makeResponseListDto(collectionItems, collectionItemMapper::collectionItemsToMovieDtos);
+        if (response.getContent() != null && !response.getContent().isEmpty()) {
+            redisService.put(key, response, COLLECTION_ITEM_LIST_CACHE_TTL);
+        }
+        return makeSuccessResponse(response, "List collection success");
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('COL_I_D')")
-    public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
         CollectionItem collectionItem = collectionItemRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Collection Item] Not found", ErrorCode.COLLECTION_ITEM_ERROR_NOT_FOUND));
+        Long collectionId = collectionItem.getCollection().getId();
         collectionItemRepository.delete(collectionItem);
+        clearCollectionItemListCache(collectionId);
         return makeSuccessResponse("Delete collection item success");
     }
 
@@ -143,7 +164,25 @@ public class CollectionItemController extends ABasicController {
             item.setOrdering(orderingMap.get(item.getId()));
         }
         collectionItemRepository.saveAll(collectionItems);
+        collectionItems.stream()
+                .map(item -> item.getCollection().getId())
+                .distinct()
+                .forEach(this::clearCollectionItemListCache);
 
         return makeSuccessResponse("Update ordering collectionItems success");
+    }
+
+    private String buildCollectionItemListCacheKey(Long collectionId, Pageable pageable) {
+        return redisService.buildKey(
+                "collection-item",
+                "list",
+                collectionId.toString(),
+                String.valueOf(pageable.getPageNumber()),
+                String.valueOf(pageable.getPageSize())
+        );
+    }
+
+    private void clearCollectionItemListCache(Long collectionId) {
+        redisService.deleteByPrefix(redisService.buildKey("collection-item", "list", collectionId.toString()));
     }
 }

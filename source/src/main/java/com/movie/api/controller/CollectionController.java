@@ -1,6 +1,7 @@
 package com.movie.api.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
@@ -14,6 +15,7 @@ import com.movie.api.form.collection.CreateCollectionForm;
 import com.movie.api.form.collection.UpdateCollectionForm;
 import com.movie.api.mapper.CollectionMapper;
 import com.movie.api.service.CollectionService;
+import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.CollectionCriteria;
 import com.movie.api.storage.model.Collection;
 import com.movie.api.storage.model.Style;
@@ -41,6 +43,8 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @Slf4j
 public class CollectionController extends ABasicController {
+    private static final int COLLECTION_LIST_CACHE_TTL = 5 * 60;
+
     @Autowired
     private CollectionRepository collectionRepository;
 
@@ -58,6 +62,9 @@ public class CollectionController extends ABasicController {
 
     @Autowired
     private CollectionService collectionService;
+
+    @Autowired
+    private RedisService redisService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('COL_C')")
@@ -81,6 +88,10 @@ public class CollectionController extends ABasicController {
             collectionService.fillDataForCollection(collection);
         }
 
+        if (Objects.equals(collection.getType(), BaseConstant.COLLECTION_TYPE_SECTION)) {
+            clearSectionCollectionListCache();
+        }
+
         return makeSuccessResponse("Create collection success");
     }
 
@@ -100,19 +111,30 @@ public class CollectionController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<CollectionDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<CollectionDto> get(@PathVariable Long id) {
         Collection collection = collectionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Collection] Not found", ErrorCode.COMMENT_ERROR_NOT_FOUND));
         return makeSuccessResponse(collectionMapper.entityToCollectionDto(collection), "Get collection success");
     }
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<ResponseListDto<List<CollectionDto>>> list(CollectionCriteria criteria, Pageable pageable) {
+    public ApiMessageDto<ResponseListDto<List<CollectionDto>>> list(Pageable pageable) {
+        CollectionCriteria criteria = new CollectionCriteria();
         criteria.setStatus(BaseConstant.STATUS_ACTIVE);
         criteria.setType(BaseConstant.COLLECTION_TYPE_SECTION);
         pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(new Sort.Order(Sort.Direction.ASC, "ordering")));
+
+        String key = buildSectionCollectionListCacheKey(pageable);
+        ResponseListDto<List<CollectionDto>> cached = redisService.get(key, new TypeReference<>() {
+        });
+        if (cached != null) {
+            return makeSuccessResponse(cached, "List collection success");
+        }
+
         Page<Collection> collections = collectionRepository.findAll(criteria.getSpecification(), pageable);
-        return makeSuccessResponse(makeResponseListDto(collections, collectionMapper::entityToCollectionDetailsDtoList), "List collection success");
+        ResponseListDto<List<CollectionDto>> response = makeResponseListDto(collections, collectionMapper::entityToCollectionDetailsDtoList);
+        redisService.put(key, response, COLLECTION_LIST_CACHE_TTL);
+        return makeSuccessResponse(response, "List collection success");
     }
 
     @GetMapping(value = "/topics", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -140,9 +162,14 @@ public class CollectionController extends ABasicController {
             collection.setStyle(style);
         }
 
+        Integer oldType = collection.getType();
         collectionMapper.fromUpdateCollectionFormToEntity(form, collection);
         collection.setColor(objectMapper.writeValueAsString(form.getColors()));
         collectionRepository.save(collection);
+        if (Objects.equals(oldType, BaseConstant.COLLECTION_TYPE_SECTION)
+                || Objects.equals(collection.getType(), BaseConstant.COLLECTION_TYPE_SECTION)) {
+            clearSectionCollectionListCache();
+        }
         return makeSuccessResponse("Update collection success");
     }
 
@@ -151,8 +178,12 @@ public class CollectionController extends ABasicController {
     public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
         Collection collection = collectionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Collection] Not found", ErrorCode.COLLECTION_ERROR_NOT_FOUND));
+        Integer type = collection.getType();
         collectionItemRepository.deleteByCollectionId(collection.getId());
         collectionRepository.delete(collection);
+        if (Objects.equals(type, BaseConstant.COLLECTION_TYPE_SECTION)) {
+            clearSectionCollectionListCache();
+        }
         return makeSuccessResponse("Delete collection success");
     }
 
@@ -179,7 +210,24 @@ public class CollectionController extends ABasicController {
             item.setOrdering(orderingMap.get(item.getId()));
         }
         collectionRepository.saveAll(collections);
+        if (collections.stream().anyMatch(item -> Objects.equals(item.getType(), BaseConstant.COLLECTION_TYPE_SECTION))) {
+            clearSectionCollectionListCache();
+        }
 
         return makeSuccessResponse("Update ordering collections success");
+    }
+
+    private String buildSectionCollectionListCacheKey(Pageable pageable) {
+        return redisService.buildKey(
+                "collection",
+                "list",
+                "section",
+                String.valueOf(pageable.getPageNumber()),
+                String.valueOf(pageable.getPageSize())
+        );
+    }
+
+    private void clearSectionCollectionListCache() {
+        redisService.deleteByPrefix(redisService.buildKey("collection", "list", "section"));
     }
 }

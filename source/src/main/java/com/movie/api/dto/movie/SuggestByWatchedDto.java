@@ -10,6 +10,6 @@ import java.util.List;
 @Setter
 @ApiModel
 public class SuggestByWatchedDto {
-    private MovieDto referenceMovie;
+    private MovieDto watchedMovie;
     private List<MovieDto> suggestedMovies;
 }

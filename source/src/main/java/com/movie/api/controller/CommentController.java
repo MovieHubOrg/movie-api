@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -85,14 +84,17 @@ public class CommentController extends ABasicController {
         Comment comment = commentMapper.fromCreateCommentFormToEntity(form);
         comment.setAuthor(author);
         comment.setAuthorInfo(objectMapper.writeValueAsString(accountMapper.entityToAccountDto(author)));
+        Movie movie;
 
         if (form.getMovieItemId() != null) {
             MovieItem movieItem = movieItemRepository.findById(form.getMovieItemId())
                     .orElseThrow(() -> new NotFoundException("[MovieItem] not found", ErrorCode.MOVIE_ITEM_ERROR_NOT_FOUND));
             comment.setMovieItem(movieItem);
             comment.setMovieId(movieItem.getMovie().getId());
+
+            movie = movieItem.getMovie();
         } else {
-            Movie movie = movieRepository.findById(form.getMovieId())
+            movie = movieRepository.findById(form.getMovieId())
                     .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
             comment.setMovieId(movie.getId());
         }
@@ -117,22 +119,23 @@ public class CommentController extends ABasicController {
         commentRepository.save(comment);
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
         if (comment.getReplyTo() != null) {
-            createReplyNotificationTemplate(comment, author, comment.getReplyTo());
+            createReplyNotificationTemplate(comment, author, comment.getReplyTo(), movie);
         }
         return makeSuccessResponse(commentMapper.entityToCommentDto(comment), "Create comment success");
     }
 
-    private void createReplyNotificationTemplate(Comment comment, Account author, Account replyTo) {
+    private void createReplyNotificationTemplate(Comment comment, Account author, Account replyTo, Movie movie) {
         CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
         String title = String.format("%s đã trả lời bình luận của bạn", author.getFullName());
-        notificationService.createNotificationTemplate(
+        notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_REPLY_COMMENT,
                 data,
                 BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
-                String.valueOf(replyTo.getId()),
-                new Date()
+                String.valueOf(replyTo.getId())
         );
     }
 
@@ -214,6 +217,11 @@ public class CommentController extends ABasicController {
             reaction.setType(form.getType());
             reactionRepository.save(reaction);
             increaseCounter(comment.getId(), form.getType());
+            if (!Objects.equals(comment.getAuthor().getId(), userId)) {
+                Account voter = accountRepository.findById(userId)
+                        .orElseThrow(() -> new NotFoundException("[Account] not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+                createVoteNotificationTemplate(comment, voter, form.getType());
+            }
         } else if (reaction.getType().equals(form.getType())) {
             reactionRepository.delete(reaction);
             decreaseCounter(comment.getId(), form.getType());
@@ -224,6 +232,27 @@ public class CommentController extends ABasicController {
             reactionRepository.save(reaction);
         }
         return makeSuccessResponse("Vote success");
+    }
+
+    private void createVoteNotificationTemplate(Comment comment, Account voter, Integer reactionType) {
+        Movie movie = movieRepository.findById(comment.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
+        data.setAuthor(accountMapper.entityToAccountNotificationDto(voter));
+        data.setReactionType(reactionType);
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+        String title = Objects.equals(reactionType, BaseConstant.REACTION_TYPE_LIKE)
+                ? String.format("%s đã thích bình luận của bạn: \"%s\"", voter.getFullName(), comment.getContent())
+                : String.format("%s đã không thích bình luận của bạn: \"%s\"", voter.getFullName(), comment.getContent());
+        notificationService.sendNotificationMessage(
+                title,
+                BaseConstant.CMD_VOTE_COMMENT,
+                data,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                String.valueOf(comment.getAuthor().getId())
+        );
     }
 
     @GetMapping(value = "/vote-list/{movieId}", produces = MediaType.APPLICATION_JSON_VALUE)

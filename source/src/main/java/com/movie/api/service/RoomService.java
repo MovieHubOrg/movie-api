@@ -8,10 +8,7 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.form.ErrorForm;
 import com.movie.api.form.mqtt.BaseSendMsgForm;
-import com.movie.api.form.room.CreateChatForm;
-import com.movie.api.form.room.EndRoomForm;
-import com.movie.api.form.room.ParticipantLeftForm;
-import com.movie.api.form.room.UpdateParticipantCountForm;
+import com.movie.api.form.room.mqtt.*;
 import com.movie.api.service.mqtt.MqttOutboundService;
 import com.movie.api.storage.model.Chat;
 import com.movie.api.storage.model.Participant;
@@ -19,6 +16,7 @@ import com.movie.api.storage.model.Room;
 import com.movie.api.storage.repository.ChatRepository;
 import com.movie.api.storage.repository.ParticipantRepository;
 import com.movie.api.storage.repository.RoomRepository;
+import com.movie.api.utils.ConvertUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +31,8 @@ import java.util.Objects;
 @Service
 @Slf4j
 public class RoomService {
+    private static final long HOST_INACTIVE_TIMEOUT_MILLIS = 60 * 1000L;
+
     @Autowired
     private RoomRepository roomRepository;
     @Autowired
@@ -85,13 +85,20 @@ public class RoomService {
                 CreateChatForm createChatForm = objectMapper.treeToValue(messageForm.getData(), CreateChatForm.class);
                 handleCreateChat(room, createChatForm);
                 break;
+            case BaseConstant.CMD_CLIENT_PING:
+                ClientPingForm clientPingForm = objectMapper.treeToValue(messageForm.getData(), ClientPingForm.class);
+                handleClientPing(room, clientPingForm);
+                break;
             default:
                 log.warn("Unknown room MQTT cmd {} for room {}", messageForm.getCmd(), roomId);
         }
     }
 
     private void handleParticipantLeft(Room room, ParticipantLeftForm participantLeftForm) {
-        Long accountId = participantLeftForm.getAccountId();
+        Long accountId = ConvertUtils.convertStringToLong(participantLeftForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
         Participant participant = participantRepository.findByRoomIdAndUserId(room.getId(), accountId).orElse(null);
         if (participant == null) {
             log.warn("Participant {} not found in room {}", accountId, room.getId());
@@ -107,7 +114,7 @@ public class RoomService {
 
         boolean isHost = Objects.equals(room.getHost().getId(), accountId);
         if (isHost) {
-            endRoom(room, "HOST_LEFT");
+            endRoom(room, BaseConstant.HOST_LEFT);
             return;
         }
         // Guest left → publish current viewer count
@@ -115,7 +122,10 @@ public class RoomService {
     }
 
     private void handleCreateChat(Room room, CreateChatForm createChatForm) {
-        Long accountId = createChatForm.getAccountId();
+        Long accountId = ConvertUtils.convertStringToLong(createChatForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
         Participant participant = participantRepository.findByRoomIdAndUserId(room.getId(), accountId).orElse(null);
         if (participant == null) {
             log.warn("Ignore chat because participant {} not found in room {}", accountId, room.getId());
@@ -138,22 +148,43 @@ public class RoomService {
         log.info("Saved chat {} for room {} from account {}", chat.getId(), room.getId(), accountId);
     }
 
-    public int endExpiredRunningRooms() {
+    private void handleClientPing(Room room, ClientPingForm clientPingForm) {
+        Long accountId = ConvertUtils.convertStringToLong(clientPingForm.getAccountId());
+        if (accountId == null) {
+            return;
+        }
+        if (!Objects.equals(room.getHost().getId(), accountId)) {
+            log.warn("Ignore client ping because account {} is not host of room {}", accountId, room.getId());
+            return;
+        }
+
+        room.setLastTimeOnline(new Date());
+        roomRepository.save(room);
+        log.debug("Updated lastTimeOnline for room {} by host {}", room.getId(), accountId);
+    }
+
+    public int endTimedOutRunningRooms() {
         Date now = new Date();
-        List<Room> expiredRooms = roomRepository.findAllByStateAndEndTimeLessThanEqual(BaseConstant.ROOM_STATE_RUNNING, now);
-        if (expiredRooms.isEmpty()) {
+        Date hostInactiveBefore = new Date(now.getTime() - HOST_INACTIVE_TIMEOUT_MILLIS);
+        List<Room> roomsToEnd = roomRepository.findRunningRoomsToEnd(
+                BaseConstant.ROOM_STATE_RUNNING,
+                now,
+                hostInactiveBefore
+        );
+        if (roomsToEnd.isEmpty()) {
             return 0;
         }
 
         int endedRooms = 0;
-        log.info("Found {} expired running room(s) at {}", expiredRooms.size(), now);
-        for (Room room : expiredRooms) {
+        log.info("Found {} running room(s) to end at {}", roomsToEnd.size(), now);
+        for (Room room : roomsToEnd) {
             try {
-                if (endRoom(room, "ROOM_TIMEOUT")) {
+                String reason = resolveEndRoomReason(room, now, hostInactiveBefore);
+                if (endRoom(room, reason)) {
                     endedRooms++;
                 }
             } catch (Exception e) {
-                log.error("Failed to end expired room {}", room.getId(), e);
+                log.error("Failed to end running room {}", room.getId(), e);
             }
         }
         return endedRooms;
@@ -184,7 +215,7 @@ public class RoomService {
         );
 
         EndRoomForm endRoomForm = new EndRoomForm();
-        endRoomForm.setRoomId(room.getId());
+        endRoomForm.setRoomId(String.valueOf(room.getId()));
         endRoomForm.setReason(reason);
         publishToRoom(room.getId(), BaseConstant.CMD_END_ROOM, endRoomForm);
         return true;
@@ -193,7 +224,7 @@ public class RoomService {
     public void publishCurrentViewerCount(Room room) {
         int currentViewers = participantRepository.countByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
         UpdateParticipantCountForm form = new UpdateParticipantCountForm();
-        form.setRoomId(room.getId());
+        form.setRoomId(String.valueOf(room.getId()));
         form.setCurrentViewers(currentViewers);
         publishToRoom(room.getId(), BaseConstant.CMD_UPDATE_PARTICIPANT_COUNT, form);
         log.info("Room {} current viewers: {}", room.getId(), currentViewers);
@@ -201,17 +232,27 @@ public class RoomService {
 
     public void publishParticipantLeft(Long roomId, Long accountId) {
         ParticipantLeftForm form = new ParticipantLeftForm();
-        form.setAccountId(accountId);
+        form.setAccountId(accountId.toString());
         publishToRoom(roomId, BaseConstant.CMD_PARTICIPANT_LEFT, form);
         log.info("Published participant left test message for room {} account {}", roomId, accountId);
     }
 
     public void publishCreateChat(Long roomId, Long accountId, String content) {
         CreateChatForm form = new CreateChatForm();
-        form.setAccountId(accountId);
+        form.setAccountId(accountId.toString());
         form.setContent(content);
         publishToRoom(roomId, BaseConstant.CMD_CREATE_CHAT, form);
         log.info("Published create chat test message for room {} account {}", roomId, accountId);
+    }
+
+    private String resolveEndRoomReason(Room room, Date now, Date hostInactiveBefore) {
+        if (room.getEndTime() != null && !room.getEndTime().after(now)) {
+            return BaseConstant.ROOM_TIMEOUT;
+        }
+        if (room.getLastTimeOnline() != null && !room.getLastTimeOnline().after(hostInactiveBefore)) {
+            return BaseConstant.HOST_LEFT;
+        }
+        return BaseConstant.ROOM_TIMEOUT;
     }
 
     private <T> void publishToRoom(Long roomId, String cmd, T data) {

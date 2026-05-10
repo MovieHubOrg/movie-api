@@ -13,6 +13,7 @@ import java.util.Date;
 @Setter
 @ApiModel
 public class RoomDto extends ABasicAdminDto {
+    private String name;
     private String code;
     private Integer kind;
     private MovieItemDto movieItem;

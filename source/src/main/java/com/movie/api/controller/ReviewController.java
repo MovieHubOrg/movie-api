@@ -6,6 +6,7 @@ import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.reaction.VoteDto;
 import com.movie.api.dto.review.ReviewDto;
+import com.movie.api.dto.review.ReviewNotificationDto;
 import com.movie.api.dto.review.ReviewStatisticsDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
@@ -14,8 +15,10 @@ import com.movie.api.form.ChangeStatusForm;
 import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.form.review.CreateReviewForm;
 import com.movie.api.form.review.UpdateReviewForm;
+import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.ReviewMapper;
 import com.movie.api.service.MovieService;
+import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.ReviewCriteria;
 import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.*;
@@ -56,6 +59,12 @@ public class ReviewController extends ABasicController {
 
     @Autowired
     private MovieService movieService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private AccountMapper accountMapper;
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -134,6 +143,8 @@ public class ReviewController extends ABasicController {
                 .orElseThrow(() -> new NotFoundException("[Review] Not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));
 
         Long userId = getCurrentUser();
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
         Reaction reaction = reactionRepository.findFirstByReviewIdAndUserId(review.getId(), userId).orElse(null);
 
         if (reaction == null) {
@@ -143,6 +154,9 @@ public class ReviewController extends ABasicController {
             reaction.setType(form.getType());
             reactionRepository.save(reaction);
             increaseCounter(review.getId(), form.getType());
+            if (!Objects.equals(review.getAuthor().getId(), userId)) {
+                createVoteNotificationTemplate(review, user, form.getType());
+            }
         } else if (reaction.getType().equals(form.getType())) {
             reactionRepository.delete(reaction);
             decreaseCounter(review.getId(), form.getType());
@@ -153,6 +167,27 @@ public class ReviewController extends ABasicController {
             reactionRepository.save(reaction);
         }
         return makeSuccessResponse("Vote success");
+    }
+
+    private void createVoteNotificationTemplate(Review review, Account voter, Integer reactionType) {
+        ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
+        Movie movie = movieRepository.findById(review.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+        data.setAuthor(accountMapper.entityToAccountNotificationDto(voter));
+        data.setReactionType(reactionType);
+        String title = Objects.equals(reactionType, BaseConstant.REACTION_TYPE_LIKE)
+                ? String.format("%s đã thích đánh giá của bạn", voter.getFullName())
+                : String.format("%s đã không thích đánh giá của bạn", voter.getFullName());
+        notificationService.sendNotificationMessage(
+                title,
+                BaseConstant.CMD_VOTE_REVIEW,
+                data,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                String.valueOf(review.getAuthor().getId())
+        );
     }
 
     private void increaseCounter(Long reviewId, Integer type) {

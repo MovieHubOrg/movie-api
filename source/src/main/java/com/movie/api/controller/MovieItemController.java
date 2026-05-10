@@ -4,15 +4,18 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
+import com.movie.api.dto.movieItem.MovieItemNotificationDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.UpdateOrderingForm;
 import com.movie.api.form.movieItem.CreateMovieItemForm;
 import com.movie.api.form.movieItem.UpdateMovieItemForm;
+import com.movie.api.form.notification.SendNotificationConfigForm;
 import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.service.MediaService;
 import com.movie.api.service.MovieService;
+import com.movie.api.service.NotificationService;
 import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.MovieItemCriteria;
 import com.movie.api.storage.model.Movie;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,6 +74,9 @@ public class MovieItemController extends ABasicController {
 
     @Autowired
     private MovieService movieService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -128,6 +135,7 @@ public class MovieItemController extends ABasicController {
         movieItem = movieItemRepository.save(movieItem);
 
         handleUpdateLatestMovieItem(movieItem, form.getIsLatest());
+        createMovieItemNotificationTemplate(movieItem, form.getSendNotificationConfig());
 
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
 
@@ -311,6 +319,48 @@ public class MovieItemController extends ABasicController {
         if (labelExists) {
             throw new BadRequestException("[Movie Item] label existed", ErrorCode.MOVIE_ITEM_ERROR_LABEL_EXISTED);
         }
+    }
+
+    private void createMovieItemNotificationTemplate(MovieItem movieItem, SendNotificationConfigForm sendNotificationConfig) {
+        if (!Boolean.TRUE.equals(sendNotificationConfig.getIsSendNotification())) {
+            return;
+        }
+
+        Movie movie = movieItem.getMovie();
+        MovieItemNotificationDto data = movieItemMapper.entityToMovieItemNotificationDto(movieItem);
+        String title = StringUtils.isNotBlank(sendNotificationConfig.getTitle())
+                ? sendNotificationConfig.getTitle()
+                : generateMovieItemNotificationTitle(movieItem);
+        Date scheduleAt = movieService.resolveScheduleAt(sendNotificationConfig.getScheduleAt(), movieItem.getReleaseDate());
+        Integer targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_APP;
+        String targetValue = BaseConstant.APP_MOVIE;
+
+        if (Objects.equals(sendNotificationConfig.getSendFor(), BaseConstant.SEND_NOTIFICATION_FOR_INTERESTED_USERS)) {
+            List<Long> interestedUserIds = movieService.findInterestedUserIds(movie);
+            targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT;
+            targetValue = interestedUserIds.isEmpty()
+                    ? null
+                    : interestedUserIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+        }
+
+        if (targetValue != null) {
+            notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE_ITEM, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, targetType, targetValue, scheduleAt);
+        }
+    }
+
+    private String generateMovieItemNotificationTitle(MovieItem movieItem) {
+        String kindName = getMovieItemKindName(movieItem.getKind());
+        return String.format("%s mới: %s", kindName, movieItem.getTitle());
+    }
+
+    private String getMovieItemKindName(Integer kind) {
+        if (Objects.equals(kind, BaseConstant.MOVIE_ITEM_KIND_SEASON)) {
+            return "Mùa";
+        }
+        if (Objects.equals(kind, BaseConstant.MOVIE_ITEM_KIND_EPISODE)) {
+            return "Tập";
+        }
+        return "Trailer";
     }
 
     private void handleUpdateLatestMovieItem(MovieItem movieItem, Boolean isLatest) {

@@ -5,8 +5,10 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
+import com.movie.api.dto.movie.ImdbRatingsSyncDto;
 import com.movie.api.dto.movie.MovieDto;
 import com.movie.api.dto.movie.MovieNotificationDto;
+import com.movie.api.dto.movie.RecentWatchedCategoryRecommendationDto;
 import com.movie.api.dto.movie.SuggestByWatchedDto;
 import com.movie.api.dto.movieItem.MovieItemDto;
 import com.movie.api.dto.watchHistory.WatchHistoryDto;
@@ -22,6 +24,7 @@ import com.movie.api.mapper.MovieItemMapper;
 import com.movie.api.mapper.MovieMapper;
 import com.movie.api.mapper.WatchHistoryMapper;
 import com.movie.api.service.MediaService;
+import com.movie.api.service.ImdbService;
 import com.movie.api.service.MovieService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.service.feign.FeignAccountAuthService;
@@ -130,10 +133,16 @@ public class MovieController extends ABasicController {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private ImdbService imdbService;
+
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateMovieForm form) {
         Movie movie = movieMapper.fromCreateMovieFormToEntity(form);
+        if (!StringUtils.isNullOrEmpty(form.getImdbId())) {
+            movie.setImdbRating(imdbService.fetchRating(form.getImdbId()));
+        }
 
         if (form.getCategoryIds() != null && !form.getCategoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(form.getCategoryIds());
@@ -143,23 +152,32 @@ public class MovieController extends ABasicController {
         movie.setSlug(StringUtils.slugify(form.getTitle()));
         movieRepository.save(movie);
 
-        if (Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
+        if (form.getSendNotificationConfig() != null && Boolean.TRUE.equals(form.getSendNotificationConfig().getIsSendNotification())) {
             MovieNotificationDto data = movieMapper.entityToMovieNotificationDto(movie);
             SendNotificationConfigForm sendNotificationConfig = form.getSendNotificationConfig();
             String title = !StringUtils.isNullOrEmpty(sendNotificationConfig.getTitle())
                     ? sendNotificationConfig.getTitle()
                     : String.format("Phim \"%s\" vừa được ra mắt!", movie.getTitle());
-            Date scheduleAt = sendNotificationConfig.getScheduleAt().before(movie.getReleaseDate())
-                    ? sendNotificationConfig.getScheduleAt()
-                    : movie.getReleaseDate();
-            notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_MOVIE, scheduleAt);
+            Date scheduleAt = movieService.resolveScheduleAt(sendNotificationConfig.getScheduleAt(), movie.getReleaseDate());
+            Integer targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_APP;
+            String targetValue = BaseConstant.APP_MOVIE;
+            if (Objects.equals(sendNotificationConfig.getSendFor(), BaseConstant.SEND_NOTIFICATION_FOR_INTERESTED_USERS)) {
+                List<Long> interestedUserIds = movieService.findInterestedUserIds(movie);
+                targetType = BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT;
+                targetValue = interestedUserIds.isEmpty()
+                        ? null
+                        : interestedUserIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            }
+            if (targetValue != null) {
+                notificationService.createNotificationTemplate(title, BaseConstant.CMD_NEW_MOVIE, data, BaseConstant.NOTIFICATION_TYPE_MOVIE, targetType, targetValue, scheduleAt);
+            }
         }
         return makeSuccessResponse("Create movie success");
     }
 
     @GetMapping(value = "/admin/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_V')")
-    public ApiMessageDto<MovieDto> adminGet(@PathVariable("id") Long id) {
+    public ApiMessageDto<MovieDto> adminGet(@PathVariable Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
 
@@ -167,12 +185,11 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<MovieDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<MovieDto> get(@PathVariable Long id) {
         // key -> {movie}::{id}
         String key = redisService.buildKey("movie", id.toString());
         MovieDto movieDto = redisService.get(key, MovieDto.class);
         if (movieDto != null) {
-            redisService.refreshTTL(key, 5 * 60);
             return makeSuccessResponse(movieDto, "Get movie success");
         }
 
@@ -274,6 +291,7 @@ public class MovieController extends ABasicController {
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateMovieForm form) {
         Movie movie = movieRepository.findById(form.getId())
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        String previousImdbId = movie.getImdbId();
 
         if (!Objects.equals(movie.getTitle(), form.getTitle())) {
             movie.setSlug(StringUtils.slugify(form.getTitle()));
@@ -298,10 +316,14 @@ public class MovieController extends ABasicController {
         mediaService.deleteFiles(deletedFiles);
 
         movieMapper.fromUpdateMovieFormToEntity(form, movie);
+        boolean imdbRatingChanged = !Objects.equals(previousImdbId, movie.getImdbId());
+        if (imdbRatingChanged) {
+            movie.setImdbRating(imdbService.fetchRating(form.getImdbId()));
+        }
         if (BaseConstant.MOVIE_TYPE_SERIES.equals(movie.getType()) && form.getDuration() != null) {
             MovieMetadataForm metadata = new MovieMetadataForm();
             try {
-                if (!movie.getMetadata().isEmpty()) {
+                if (!StringUtils.isNullOrEmpty(movie.getMetadata())) {
                     metadata = objectMapper.readValue(movie.getMetadata(), MovieMetadataForm.class);
                 }
                 metadata.setDuration(form.getDuration());
@@ -314,12 +336,25 @@ public class MovieController extends ABasicController {
 
         log.debug("========> start remove movieId {}", movie.getId());
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "recommendation"));
         return makeSuccessResponse("Update movie success");
+    }
+
+    @PostMapping(value = "/admin/imdb-ratings/sync", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('MOV_U')")
+    @ApiIgnore
+    public ApiMessageDto<ImdbRatingsSyncDto> syncImdbRatings() {
+        try {
+            return makeSuccessResponse(imdbService.syncAllMovieRatings(), "Sync IMDb ratings success");
+        } catch (Exception ex) {
+            throw new BadRequestException("Failed to sync IMDb ratings: " + ex.getMessage());
+        }
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_D')")
-    public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
 
@@ -371,60 +406,72 @@ public class MovieController extends ABasicController {
         movieRepository.delete(movie);
 
         redisService.delete(redisService.buildKey("movie", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "suggestion", movie.getId().toString()));
+        redisService.deleteByPrefix(redisService.buildKey("movie", "recommendation"));
         return makeSuccessResponse("Delete movie success");
     }
 
     @GetMapping(value = "/suggestion/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<List<MovieDto>> suggestion(@PathVariable Long id) {
-        Movie movie = movieRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
-                .orElseThrow(() -> new NotFoundException("[Movie] Not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
-        List<Movie> movies = movieRepository.findSuggestion(id,
-                movie.getCategories().stream().map(Category::getId).collect(Collectors.toList()),
-                movie.getCountry(),
-                movie.getLanguage(),
-                movie.getType(),
-                PageRequest.of(0, 10));
-        return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies), "List movie success");
+        return makeSuccessResponse(movieService.getCachedSuggestedMovies(id), "List movie success");
+    }
+
+    @ApiIgnore
+    @GetMapping(value = "/list-watched", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> listWatched() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        List<Movie> watchedMovies = watchHistoryRepository
+                .findWatchedMoviesByUserOrderByDate(user.getId(), PageRequest.of(0, 3));
+
+        return makeSuccessResponse(movieMapper.fromEntityToMovieAutoCompleteShortDtoList(watchedMovies), "List watched movie success");
     }
 
     /**
      * Returns movies similar to a specific movie from the user's watch history.
      *
-     * @param position Position in watch history (1 = most recent completed, 2 = second, etc.)
+     * @param page Zero-based watch history page (0 = most recent watched, 1 = second, etc.)
      * @return List of recommended movies based on the selected reference movie
      */
     @GetMapping(value = "/suggest-by-watched", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "position") Integer position) {
-        // Validate position is within bounds
-        if (position < 1 || position > 3) {
-            return makeSuccessResponse(null, "Position must be between 1 and 3");
+    public ApiMessageDto<SuggestByWatchedDto> suggestByWatched(@RequestParam(value = "page") Integer page) {
+        if (page < 0 || page > 1) {
+            return makeSuccessResponse(null, "Page must be between 0 and 1");
         }
 
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
-        List<WatchHistory> completedMovies = watchHistoryRepository
-                .findCompletedMoviesByUserOrderByDate(user.getId(), PageRequest.of(0, position));
+        List<Movie> watchedMovies = watchHistoryRepository
+                .findWatchedMoviesByUserOrderByDate(user.getId(), PageRequest.of(page, 1));
 
-        if (completedMovies.size() < position) {
+        if (watchedMovies.isEmpty()) {
             return makeSuccessResponse(null, "Not enough watch history");
         }
 
-        Movie referenceMovie = completedMovies.get(position - 1).getMovie();
-
-        List<Movie> suggestedMovies = movieRepository.findSuggestion(
-                referenceMovie.getId(),
-                referenceMovie.getCategories().stream().map(Category::getId).collect(Collectors.toList()),
-                referenceMovie.getCountry(),
-                referenceMovie.getLanguage(),
-                referenceMovie.getType(),
-                PageRequest.of(0, 10)
-        );
+        Movie watchedMovie = watchedMovies.get(0);
 
         SuggestByWatchedDto result = new SuggestByWatchedDto();
-        result.setReferenceMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(referenceMovie));
-        result.setSuggestedMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(suggestedMovies));
+        result.setWatchedMovie(movieMapper.fromEntityToMovieAutoCompleteShortDto(watchedMovie));
+        result.setSuggestedMovies(movieService.getCachedSuggestedMovies(watchedMovie.getId()));
         return makeSuccessResponse(result, "Suggest by watched recommendations");
+    }
+
+    @GetMapping(value = "/recommendation", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<MovieDto>> recommendation() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        return makeSuccessResponse(movieService.getRecommendationsForUser(user.getId(), 20), "List recommendation movie success");
+    }
+
+    @GetMapping(value = "/recommendation/recent-watched-category", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<List<RecentWatchedCategoryRecommendationDto>> recentWatchedCategoryRecommendation() {
+        Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 5, 10), "List recent watched recommendation movie success");
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)

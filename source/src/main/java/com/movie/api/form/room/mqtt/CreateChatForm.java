@@ -1,4 +1,4 @@
-package com.movie.api.form.room;
+package com.movie.api.form.room.mqtt;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -6,15 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 
 @Getter
 @Setter
 @ApiModel
 public class CreateChatForm {
-    @NotNull(message = "accountId cannot be null")
+    @NotBlank(message = "accountId cannot be blank")
     @ApiModelProperty(required = true)
-    private Long accountId;
+    private String accountId;
 
     @NotBlank(message = "content cannot be null")
     @ApiModelProperty(required = true)

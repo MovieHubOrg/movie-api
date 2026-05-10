@@ -17,7 +17,12 @@ public interface RoomRepository extends JpaRepository<Room, Long>, JpaSpecificat
 
     Optional<Room> findFirstByHostIdAndState(Long hostId, Integer state);
 
-    List<Room> findAllByStateAndEndTimeLessThanEqual(Integer state, Date endTime);
+    @Query("SELECT r FROM Room r " +
+            "WHERE r.state = :state " +
+            "AND (r.endTime <= :now OR (r.lastTimeOnline IS NOT NULL AND r.lastTimeOnline <= :hostInactiveBefore))")
+    List<Room> findRunningRoomsToEnd(@Param("state") Integer state,
+                                     @Param("now") Date now,
+                                     @Param("hostInactiveBefore") Date hostInactiveBefore);
 
     @Query("select r.id from Room r where r.state = :state")
     List<Long> findIdsByState(@Param("state") Integer state);

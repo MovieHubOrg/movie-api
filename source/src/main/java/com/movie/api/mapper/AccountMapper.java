@@ -5,6 +5,8 @@ import com.movie.api.dto.account.AccountNotificationDto;
 import com.movie.api.storage.model.Account;
 import org.mapstruct.*;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface AccountMapper {
@@ -29,4 +31,16 @@ public interface AccountMapper {
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToAccountNotificationDto")
     AccountNotificationDto entityToAccountNotificationDto(Account account);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "username", target = "username")
+    @Mapping(source = "email", target = "email")
+    @Mapping(source = "fullName", target = "fullName")
+    @Mapping(source = "avatarPath", target = "avatarPath")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToAccountDtoAutoComplete")
+    AccountDto entityToAccountDtoAutoComplete(Account account);
+
+    @IterableMapping(elementTargetType = AccountDto.class, qualifiedByName = "entityToAccountDtoAutoComplete")
+    List<AccountDto> entityToAccountDtoAutoCompleteList(List<Account> accounts);
 }

@@ -77,4 +77,10 @@ public class Movie extends Auditable<String> {
 
     @Column(columnDefinition = "LONGTEXT")
     private String metadata;
+
+    @Column(name = "imdb_id", length = 20)
+    private String imdbId;
+
+    @Column(name = "imdb_rating")
+    private Double imdbRating;
 }

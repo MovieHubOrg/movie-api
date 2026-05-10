@@ -71,7 +71,7 @@ public class RoomController extends ABasicController {
     }
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<Void> create(@Valid @RequestBody CreateRoomForm form) {
+    public ApiMessageDto<RoomDto> create(@Valid @RequestBody CreateRoomForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[User] not found", ErrorCode.USER_ERROR_NOT_FOUND));
 
@@ -94,6 +94,7 @@ public class RoomController extends ABasicController {
         room.setCode(generateRoomCode());
         room.setMovieItem(movieItem);
         room.setHost(user);
+        room.setStartTime(startTime);
         room.setEndTime(endTime);
         room.setState(BaseConstant.ROOM_STATE_PENDING);
         roomRepository.save(room);
@@ -126,7 +127,7 @@ public class RoomController extends ABasicController {
 
         room.setParticipantCount(participants.size());
         roomRepository.save(room);
-        return makeSuccessResponse("Create room success");
+        return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Create room success");
     }
 
     @PostMapping(value = "/start/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -150,6 +151,7 @@ public class RoomController extends ABasicController {
         }
 
         room.setStartTime(now);
+        room.setLastTimeOnline(now);
         room.setState(BaseConstant.ROOM_STATE_RUNNING);
         roomRepository.save(room);
         return makeSuccessResponse("Start room success");
@@ -165,7 +167,7 @@ public class RoomController extends ABasicController {
         if (!Objects.equals(room.getState(), BaseConstant.ROOM_STATE_RUNNING)) {
             throw new BadRequestException("[Room] room state invalid", ErrorCode.ROOM_ERROR_INVALID_STATE);
         }
-        roomService.endRoom(room, "ROOM_END");
+        roomService.endRoom(room, BaseConstant.ROOM_END);
         return makeSuccessResponse("End room success");
     }
 
@@ -190,6 +192,8 @@ public class RoomController extends ABasicController {
                 throw new BadRequestException("[Room] already joined", ErrorCode.ROOM_ERROR_ALREADY_JOINED);
             }
             participant.setState(BaseConstant.PARTICIPANT_STATE_JOIN);
+            room.setLastTimeOnline(new Date());
+            roomRepository.save(room);
 
         } else {
             boolean isHostJoined = participantRepository.existsByRoomIdAndRoleAndState(id, BaseConstant.PARTICIPANT_ROLE_HOST, BaseConstant.PARTICIPANT_STATE_JOIN);
@@ -256,10 +260,10 @@ public class RoomController extends ABasicController {
     public ApiMessageDto<Void> delete(@PathVariable Long id) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Room] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
-        if (!isAdmin() || !Objects.equals(room.getHost().getId(), getCurrentUser())) {
+        if (!isAdmin() && !Objects.equals(room.getHost().getId(), getCurrentUser())) {
             throw new UnauthorizationException("Not allow");
         }
-        if (!Objects.equals(room.getState(), BaseConstant.ROOM_STATE_ENDING)) {
+        if (Objects.equals(room.getState(), BaseConstant.ROOM_STATE_RUNNING)) {
             throw new BadRequestException("[Room] room state invalid", ErrorCode.ROOM_ERROR_INVALID_STATE);
         }
 

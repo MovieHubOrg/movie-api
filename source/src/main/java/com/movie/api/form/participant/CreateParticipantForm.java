@@ -17,8 +17,8 @@ public class CreateParticipantForm {
     @ApiModelProperty(required = true)
     private Long roomId;
 
-    @NotNull(message = "accounts cannot be null")
-    @Size(min = 1, message = "accounts must have at least 1 account")
+    @NotNull(message = "accountIds cannot be null")
+    @Size(min = 1, message = "accountIds must have at least 1 account")
     @ApiModelProperty(required = true)
-    private List<@NotNull Long> accounts;
+    private List<@NotNull Long> accountIds;
 }

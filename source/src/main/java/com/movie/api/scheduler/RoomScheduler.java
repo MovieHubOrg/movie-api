@@ -13,9 +13,9 @@ public class RoomScheduler {
     private RoomService roomService;
 
     @Scheduled(fixedDelay = 60000)
-    public void endExpiredRooms() {
-        log.info("======> Start scheduler endExpiredRooms");
-        int endedRooms = roomService.endExpiredRunningRooms();
-        log.info("======> End scheduler endExpiredRooms, ended {} room(s)", endedRooms);
+    public void endTimedOutRooms() {
+        log.info("======> Start scheduler endTimedOutRooms");
+        int endedRooms = roomService.endTimedOutRunningRooms();
+        log.info("======> End scheduler endTimedOutRooms, ended {} room(s)", endedRooms);
     }
 }

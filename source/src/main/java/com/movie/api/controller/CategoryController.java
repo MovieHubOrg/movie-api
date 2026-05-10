@@ -54,7 +54,7 @@ public class CategoryController extends ABasicController {
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<CategoryDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<CategoryDto> get(@PathVariable Long id) {
         Category category = categoryRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Category] Not found", ErrorCode.CATEGORY_ERROR_NOT_FOUND));
         return makeSuccessResponse(categoryMapper.entityToCategoryDto(category), "Get category success.");
@@ -62,7 +62,7 @@ public class CategoryController extends ABasicController {
 
     @GetMapping(value = "/admin/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CA_V')")
-    public ApiMessageDto<CategoryDto> getForAdmin(@PathVariable("id") Long id) {
+    public ApiMessageDto<CategoryDto> getForAdmin(@PathVariable Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Category] Not found", ErrorCode.CATEGORY_ERROR_NOT_FOUND));
         return makeSuccessResponse(categoryMapper.entityToCategoryDto(category), "Get category success.");
