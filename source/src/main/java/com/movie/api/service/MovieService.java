@@ -273,24 +273,24 @@ public class MovieService {
     }
 
     @Transactional(readOnly = true)
-    public List<RecentWatchedCategoryRecommendationDto> getRecentWatchedCategoryRecommendationsForUser(Long userId, int categoryLimit, int movieLimit) {
-        int recommendationCategoryLimit = categoryLimit > 0 ? categoryLimit : 5;
+    public RecentWatchedCategoryRecommendationDto getRecentWatchedCategoryRecommendationsForUser(Long userId, int movieLimit) {
         int recommendationMovieLimit = movieLimit > 0 ? movieLimit : 10;
         String key = redisService.buildKey(
                 "movie",
                 "recommendation",
                 "recent-watched-category",
+                "v3",
                 userId.toString()
         );
-        List<RecentWatchedCategoryRecommendationDto> cachedRecommendations = redisService.get(key, new TypeReference<>() {
+        RecentWatchedCategoryRecommendationDto cached = redisService.get(key, new TypeReference<>() {
         });
-        if (cachedRecommendations != null) {
-            return cachedRecommendations;
+        if (cached != null) {
+            return cached;
         }
 
         List<Movie> recentWatchedMovies = watchHistoryRepository.findWatchedMoviesByUserOrderByDate(userId, PageRequest.of(0, 3));
         if (recentWatchedMovies.isEmpty()) {
-            return Collections.emptyList();
+            return null;
         }
 
         List<Long> excludedMovieIds = recentWatchedMovies
@@ -303,44 +303,57 @@ public class MovieService {
             excludedMovieIds.add(-1L);
         }
 
-        Map<Long, CategoryRecommendationSignal> categorySignals = new LinkedHashMap<>();
-        for (int index = 0; index < recentWatchedMovies.size(); index++) {
-            Movie movie = recentWatchedMovies.get(index);
+        Map<Long, Integer> countByCategoryId = new HashMap<>();
+        Map<Long, Category> categoryById = new HashMap<>();
+        Map<Long, Integer> firstMovieIndexByCategoryId = new HashMap<>();
+        for (int movieIndex = 0; movieIndex < recentWatchedMovies.size(); movieIndex++) {
+            Movie movie = recentWatchedMovies.get(movieIndex);
             if (movie.getCategories() == null) {
                 continue;
             }
-            int recencyScore = recentWatchedMovies.size() - index;
-            for (Category category : movie.getCategories()) {
-                if (category == null || category.getId() == null) {
+            Set<Long> seenCategoryIdInMovie = new HashSet<>();
+            for (Category candidate : movie.getCategories()) {
+                if (candidate == null || candidate.getId() == null) {
                     continue;
                 }
-                CategoryRecommendationSignal signal = categorySignals.computeIfAbsent(
-                        category.getId(),
-                        id -> new CategoryRecommendationSignal(category)
-                );
-                signal.addScore(recencyScore);
+                Long categoryId = candidate.getId();
+                if (!seenCategoryIdInMovie.add(categoryId)) {
+                    continue;
+                }
+                categoryById.putIfAbsent(categoryId, candidate);
+                countByCategoryId.merge(categoryId, 1, Integer::sum);
+                firstMovieIndexByCategoryId.putIfAbsent(categoryId, movieIndex);
             }
         }
 
-        List<RecentWatchedCategoryRecommendationDto> recommendations = categorySignals.values().stream()
-                .sorted(Comparator.comparing(CategoryRecommendationSignal::getScore).reversed())
-                .limit(recommendationCategoryLimit)
-                .map(signal -> {
-                    List<Movie> movies = movieRepository.findRecommendationByCategory(
-                            signal.getCategory().getId(),
-                            excludedMovieIds,
-                            PageRequest.of(0, recommendationMovieLimit)
-                    );
-                    RecentWatchedCategoryRecommendationDto dto = new RecentWatchedCategoryRecommendationDto();
-                    dto.setCategory(categoryMapper.entityToCategoryAutoCompleteDto(signal.getCategory()));
-                    dto.setMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies));
-                    return dto;
-                })
-                .filter(dto -> dto.getMovies() != null && !dto.getMovies().isEmpty())
-                .collect(Collectors.toList());
+        if (countByCategoryId.isEmpty()) {
+            return null;
+        }
 
-        redisService.put(key, recommendations, 30 * 60); // cache 30 minutes
-        return recommendations;
+        Long bestCategoryId = countByCategoryId.entrySet().stream()
+                .max(Comparator.<Map.Entry<Long, Integer>>comparingInt(Map.Entry::getValue)
+                        .thenComparingInt(e -> -firstMovieIndexByCategoryId.get(e.getKey())))
+                .map(Map.Entry::getKey)
+                .orElse(null);
+        Category category = bestCategoryId != null ? categoryById.get(bestCategoryId) : null;
+        if (category == null) {
+            return null;
+        }
+
+        List<Movie> movies = movieRepository.findRecommendationByCategory(
+                category.getId(),
+                excludedMovieIds,
+                PageRequest.of(0, recommendationMovieLimit)
+        );
+        if (movies == null || movies.isEmpty()) {
+            return null;
+        }
+
+        RecentWatchedCategoryRecommendationDto dto = new RecentWatchedCategoryRecommendationDto();
+        dto.setCategory(categoryMapper.entityToCategoryAutoCompleteDto(category));
+        dto.setMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies));
+        redisService.put(key, dto, 30 * 60); // cache 30 minutes
+        return dto;
     }
 
     public List<MovieDto> findSuggestedMovies(List<Movie> movies, Set<Long> excludedMovieIds, int limit) {
@@ -382,27 +395,6 @@ public class MovieService {
                 .map(movieById::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-    }
-
-    private static class CategoryRecommendationSignal {
-        private final Category category;
-        private int score;
-
-        private CategoryRecommendationSignal(Category category) {
-            this.category = category;
-        }
-
-        private Category getCategory() {
-            return category;
-        }
-
-        private int getScore() {
-            return score;
-        }
-
-        private void addScore(int value) {
-            score += value;
-        }
     }
 
     public void updateMetaDataMovie(MovieItem movieItem) {

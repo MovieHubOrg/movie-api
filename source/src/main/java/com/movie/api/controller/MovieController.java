@@ -467,11 +467,11 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/recommendation/recent-watched-category", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<RecentWatchedCategoryRecommendationDto>> recentWatchedCategoryRecommendation() {
+    public ApiMessageDto<RecentWatchedCategoryRecommendationDto> recentWatchedCategoryRecommendation() {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
-        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 5, 10), "List recent watched recommendation movie success");
+        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 10), "Recent watched category recommendation success");
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)

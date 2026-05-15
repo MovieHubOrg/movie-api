@@ -22,6 +22,8 @@ public class VideoLibraryDto extends ABasicAdminDto {
     private Long introEnd;
     private Long outroStart;
     private Integer state;
+    private Integer audioState;
+    private String audioUrl;
     private String reason;
     private String hostname;
 }

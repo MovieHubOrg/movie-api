@@ -59,6 +59,11 @@ public class BaseConstant {
     // CMD VIDEO
     public static final String CMD_DONE_CONVERT_VIDEO = "CMD_DONE_CONVERT_VIDEO";
     public static final String CMD_CONVERT_VIDEO = "CMD_CONVERT_VIDEO";
+    public static final String CMD_CONVERT_AUDIO = "CMD_CONVERT_AUDIO";
+    public static final String CMD_DONE_CONVERT_AUDIO = "CMD_DONE_CONVERT_AUDIO";
+    public static final String CMD_DONE_PROCESS_SUBTITLE = "CMD_DONE_PROCESS_SUBTITLE";
+    public static final String CMD_TRANSLATE_SUBTITLE = "CMD_TRANSLATE_SUBTITLE";
+    public static final String CMD_DONE_TRANSLATE_SUBTITLE = "CMD_DONE_TRANSLATE_SUBTITLE";
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";

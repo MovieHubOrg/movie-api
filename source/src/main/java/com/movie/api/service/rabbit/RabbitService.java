@@ -37,6 +37,25 @@ public class RabbitService {
         rabbitSender.send(queueName, msg);
     }
 
+    public <T> void handleSendMsg(String appName, String queueName, T data, String cmd) {
+        BaseSendMsgForm<T> form = new BaseSendMsgForm<>();
+        form.setApp(appName);
+        form.setCmd(cmd);
+        form.setData(data);
+        String msg;
+        try {
+            msg = objectMapper.writeValueAsString(form);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        // create queue if existed
+        createQueueIfNotExist(queueName);
+
+        // push msg
+        rabbitSender.send(queueName, msg);
+    }
+
     private void createQueueIfNotExist(String queueName) {
         rabbitSender.createQueueIfNotExist(queueName);
     }

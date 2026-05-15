@@ -125,15 +125,7 @@ public class ServerConfigController extends ABasicController {
 
         ServerConfigDto data = serverConfigMapper.entityToServerConfigDto(serverConfig);
         String queueName = serverConfig.getServerNumber() + "_" + streamingQueue;
-        rabbitService.handleSendMsg(
-                appName,
-                queueName,
-                data,
-                BaseConstant.CMD_UPDATE_SERVER_CONFIG,
-                null,
-                null,
-                null
-        );
+        rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_UPDATE_SERVER_CONFIG);
         return makeSuccessResponse("Update server config success");
     }
 
@@ -148,15 +140,7 @@ public class ServerConfigController extends ABasicController {
 
         ServerConfigDto data = serverConfigMapper.entityToServerConfigDto(serverConfig);
         String queueName = serverConfig.getServerNumber() + "_" + streamingQueue;
-        rabbitService.handleSendMsg(
-                appName,
-                queueName,
-                data,
-                BaseConstant.CMD_UPDATE_SERVER_CONFIG,
-                null,
-                null,
-                null
-        );
+        rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_UPDATE_SERVER_CONFIG);
         return makeSuccessResponse("Update server config success");
     }
 

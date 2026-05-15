@@ -7,6 +7,9 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.form.notification.SendNotificationForm;
 import com.movie.api.form.rabbit.BaseSendMsgForm;
 import com.movie.api.form.user.AccountEventForm;
+import com.movie.api.form.video.DoneProcessSubtitleForm;
+import com.movie.api.form.video.DoneTranslateSubtitleForm;
+import com.movie.api.form.video.UpdateAudioForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.service.AccountSyncService;
 import com.movie.api.service.NotificationService;
@@ -44,14 +47,32 @@ public class RabbitMQListener {
             BaseSendMsgForm<JsonNode> baseMessageForm = objectMapper.readValue(message, new TypeReference<>() {
             });
             System.out.println("======> Received message from " + updateVideoQueue + ": " + message);
-            if (baseMessageForm.getCmd().equals(BaseConstant.CMD_DONE_CONVERT_VIDEO)) {
-                log.warn("==> Processing update video");
-                UpdateVideoForm updateVideoForm = objectMapper.treeToValue(baseMessageForm.getData(), UpdateVideoForm.class);
-                videoService.updateVideoLibrary(updateVideoForm);
-            } else if (baseMessageForm.getCmd().equals(BaseConstant.CMD_SEND_NOTIFICATION)) {
-                log.warn("==> Processing send notification");
-                SendNotificationForm sendNotificationForm = objectMapper.treeToValue(baseMessageForm.getData(), SendNotificationForm.class);
-                notificationService.sendNotification(sendNotificationForm);
+            switch (baseMessageForm.getCmd()) {
+                case BaseConstant.CMD_DONE_CONVERT_VIDEO:
+                    log.warn("==> Processing update video");
+                    UpdateVideoForm updateVideoForm = objectMapper.treeToValue(baseMessageForm.getData(), UpdateVideoForm.class);
+                    videoService.updateVideoLibrary(updateVideoForm);
+                    break;
+                case BaseConstant.CMD_DONE_CONVERT_AUDIO:
+                    log.warn("==> Processing update audio");
+                    UpdateAudioForm updateAudioForm = objectMapper.treeToValue(baseMessageForm.getData(), UpdateAudioForm.class);
+                    videoService.updateAudioLibrary(updateAudioForm);
+                    break;
+                case BaseConstant.CMD_DONE_PROCESS_SUBTITLE:
+                    log.warn("==> Processing save subtitle");
+                    DoneProcessSubtitleForm doneProcessSubtitleForm = objectMapper.treeToValue(baseMessageForm.getData(), DoneProcessSubtitleForm.class);
+                    videoService.saveSubtitle(doneProcessSubtitleForm);
+                    break;
+                case BaseConstant.CMD_DONE_TRANSLATE_SUBTITLE:
+                    log.warn("==> Processing done translate subtitle");
+                    DoneTranslateSubtitleForm doneTranslateSubtitleForm = objectMapper.treeToValue(baseMessageForm.getData(), DoneTranslateSubtitleForm.class);
+                    videoService.updateTranslatedSubtitle(doneTranslateSubtitleForm);
+                    break;
+                case BaseConstant.CMD_SEND_NOTIFICATION:
+                    log.warn("==> Processing send notification");
+                    SendNotificationForm sendNotificationForm = objectMapper.treeToValue(baseMessageForm.getData(), SendNotificationForm.class);
+                    notificationService.sendNotification(sendNotificationForm);
+                    break;
             }
             log.warn("==> DONE processing message");
         } catch (Exception e) {
