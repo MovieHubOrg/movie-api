@@ -65,6 +65,7 @@ public class BaseConstant {
     public static final String CMD_TRANSLATE_SUBTITLE = "CMD_TRANSLATE_SUBTITLE";
     public static final String CMD_DONE_TRANSLATE_SUBTITLE = "CMD_DONE_TRANSLATE_SUBTITLE";
     public static final String CMD_DELETE_VIDEO = "CMD_DELETE_VIDEO";
+    public static final String CMD_DELETE_SUBTITLE = "CMD_DELETE_SUBTITLE";
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
