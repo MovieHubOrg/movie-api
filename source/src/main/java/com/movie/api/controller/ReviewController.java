@@ -170,6 +170,10 @@ public class ReviewController extends ABasicController {
     }
 
     private void createVoteNotificationTemplate(Review review, Account voter, Integer reactionType) {
+        if (Objects.equals(review.getAuthor().getId(), voter.getId())) {
+            return;
+        }
+
         ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
         Movie movie = movieRepository.findById(review.getMovieId())
                 .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));

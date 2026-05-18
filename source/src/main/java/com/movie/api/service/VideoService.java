@@ -7,6 +7,7 @@ import com.movie.api.form.video.DoneTranslateSubtitleForm;
 import com.movie.api.form.video.UpdateAudioForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.mapper.VideoLibraryMapper;
+import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.model.ServerConfig;
 import com.movie.api.storage.model.VideoLibrary;
 import com.movie.api.storage.model.VideoLibrarySubtitle;
@@ -36,6 +37,9 @@ public class VideoService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private RedisService redisService;
 
     public void updateVideoLibrary(UpdateVideoForm form) {
         log.warn("Start updating video ID: {}", form.getId());
@@ -138,14 +142,35 @@ public class VideoService {
             log.info("Video library subtitle not found for ID: {}", form.getSubtitleId());
             return;
         }
+        Long videoLibraryId = subtitle.getVideoLibrary().getId();
         subtitle.setFileUrl(form.getFileUrl());
         subtitle.setState(form.getState());
         videoLibrarySubtitleRepository.save(subtitle);
+        evictPublicSubtitleListCache(videoLibraryId);
+
+        if (Objects.equals(form.getState(), BaseConstant.VIDEO_LIBRARY_STATE_READY)) {
+            VideoLibrary videoLibrary = videoLibraryRepository.findById(videoLibraryId).orElse(null);
+            if (videoLibrary == null) {
+                log.warn("Video library not found for translated subtitle ID: {}", form.getSubtitleId());
+            } else {
+                String subtitleName = subtitle.getLabel() != null ? subtitle.getLabel() : subtitle.getLanguage();
+                String title = String.format("Phụ đề dịch %s của video \"%s\" đã xử lý xong", subtitleName, videoLibrary.getName());
+                sendNotificationForVideoLibrary(videoLibrary, title, BaseConstant.CMD_DONE_TRANSLATE_SUBTITLE);
+            }
+        }
         log.info("End update translated subtitle ID: {}", form.getSubtitleId());
     }
 
+    private void evictPublicSubtitleListCache(Long videoLibraryId) {
+        redisService.deleteByPrefix(redisService.buildKey("video-library-subtitle", "list", videoLibraryId.toString()));
+    }
+
     private void sendNotificationForVideoLibrary(VideoLibrary videoLibrary, String title) {
+        sendNotificationForVideoLibrary(videoLibrary, title, BaseConstant.CMD_DONE_CONVERT_VIDEO);
+    }
+
+    private void sendNotificationForVideoLibrary(VideoLibrary videoLibrary, String title, String cmd) {
         VideoLibraryNotificationDto data = videoLibraryMapper.entityToVideoLibraryDtoNotification(videoLibrary);
-        notificationService.sendNotificationMessage(title, BaseConstant.CMD_DONE_CONVERT_VIDEO, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
+        notificationService.sendNotificationMessage(title, cmd, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
     }
 }

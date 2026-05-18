@@ -136,12 +136,14 @@ public class VideoLibrarySubtitleController extends ABasicController {
     public ApiMessageDto<Void> delete(@PathVariable Long id) {
         VideoLibrarySubtitle subtitle = videoLibrarySubtitleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Video Library Subtitle] Not found", ErrorCode.VIDEO_LIBRARY_SUBTITLE_ERROR_NOT_FOUND));
-        VideoLibrary videoLibrary = subtitle.getVideoLibrary();
-        Long videoLibraryId = videoLibrary.getId();
-
         if (BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING.equals(subtitle.getState())) {
             throw new BadRequestException("Cannot delete video library subtitle processing");
         }
+        if (Boolean.TRUE.equals(subtitle.getIsDefault())) {
+            throw new BadRequestException("Cannot delete default video library subtitle");
+        }
+        VideoLibrary videoLibrary = subtitle.getVideoLibrary();
+        Long videoLibraryId = videoLibrary.getId();
 
         if (videoLibrary.getServerConfig() == null) {
             throw new BadRequestException("Cannot delete video library subtitle because server config is null");
