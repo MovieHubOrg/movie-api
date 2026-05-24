@@ -2,11 +2,13 @@ package com.movie.api.service;
 
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.video.VideoLibraryNotificationDto;
+import com.movie.api.dto.video.VideoLibrarySubtitleNotificationDto;
 import com.movie.api.form.video.DoneProcessSubtitleForm;
 import com.movie.api.form.video.DoneTranslateSubtitleForm;
 import com.movie.api.form.video.UpdateAudioForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.mapper.VideoLibraryMapper;
+import com.movie.api.mapper.VideoLibrarySubtitleMapper;
 import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.model.ServerConfig;
 import com.movie.api.storage.model.VideoLibrary;
@@ -28,6 +30,9 @@ public class VideoService {
 
     @Autowired
     private VideoLibraryMapper videoLibraryMapper;
+
+    @Autowired
+    private VideoLibrarySubtitleMapper videoLibrarySubtitleMapper;
 
     @Autowired
     private VideoLibrarySubtitleRepository videoLibrarySubtitleRepository;
@@ -93,7 +98,7 @@ public class VideoService {
                     videoLibrary.getName()
             );
         }
-        sendNotificationForVideoLibrary(videoLibrary, title);
+        sendNotificationForVideoLibrary(videoLibrary, title, BaseConstant.CMD_DONE_CONVERT_AUDIO);
         log.info("End updating audio for video ID: {}", form.getVideoId());
     }
 
@@ -127,10 +132,10 @@ public class VideoService {
                 });
         subtitle.setState(form.getState());
         subtitle.setFileUrl(form.getFileUrl());
-        videoLibrarySubtitleRepository.save(subtitle);
+        subtitle = videoLibrarySubtitleRepository.save(subtitle);
 
         String title = String.format("Phụ đề gốc của video \"%s\" đã xử lý xong", videoLibrary.getName());
-        sendNotificationForVideoLibrary(videoLibrary, title);
+        sendNotificationForVideoLibrarySubtitle(title, subtitle);
 
         log.info("End saving subtitle for video ID: {}, language: {}", form.getVideoId(), form.getLanguage());
     }
@@ -155,7 +160,7 @@ public class VideoService {
             } else {
                 String subtitleName = subtitle.getLabel() != null ? subtitle.getLabel() : subtitle.getLanguage();
                 String title = String.format("Phụ đề dịch %s của video \"%s\" đã xử lý xong", subtitleName, videoLibrary.getName());
-                sendNotificationForVideoLibrary(videoLibrary, title, BaseConstant.CMD_DONE_TRANSLATE_SUBTITLE);
+                sendNotificationForVideoLibrarySubtitle(title, subtitle);
             }
         }
         log.info("End update translated subtitle ID: {}", form.getSubtitleId());
@@ -172,5 +177,10 @@ public class VideoService {
     private void sendNotificationForVideoLibrary(VideoLibrary videoLibrary, String title, String cmd) {
         VideoLibraryNotificationDto data = videoLibraryMapper.entityToVideoLibraryDtoNotification(videoLibrary);
         notificationService.sendNotificationMessage(title, cmd, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
+    }
+
+    private void sendNotificationForVideoLibrarySubtitle(String title, VideoLibrarySubtitle subtitle) {
+        VideoLibrarySubtitleNotificationDto data = videoLibrarySubtitleMapper.entityToVideoLibrarySubtitleNotificationDto(subtitle);
+        notificationService.sendNotificationMessage(title, BaseConstant.CMD_DONE_PROCESS_SUBTITLE, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
     }
 }

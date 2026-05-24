@@ -79,6 +79,7 @@ public interface VideoLibraryMapper {
     @Mapping(source = "state", target = "state")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @Mapping(source = "reason", target = "reason")
+    @Mapping(source = "sourceType", target = "sourceType")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToVideoLibraryDtoNotification")
     VideoLibraryNotificationDto entityToVideoLibraryDtoNotification(VideoLibrary video);

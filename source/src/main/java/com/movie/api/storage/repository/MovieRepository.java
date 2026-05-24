@@ -140,6 +140,29 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
             @Param("excludedMovieIds") List<Long> excludedMovieIds,
             Pageable pageable);
 
+    @Query(value = "SELECT DISTINCT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "AND m.is_featured = 1 " +
+            "AND m.id NOT IN (:excludedMovieIds) " +
+            "ORDER BY m.view_count DESC, m.average_rating DESC, m.created_date DESC " +
+            "LIMIT :#{#pageable.pageSize}", nativeQuery = true)
+    List<Movie> findFeaturedFallbackRecommendations(
+            @Param("status") Integer status,
+            @Param("excludedMovieIds") List<Long> excludedMovieIds,
+            Pageable pageable);
+
+    @Query(value = "SELECT DISTINCT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "AND m.id NOT IN (:excludedMovieIds) " +
+            "ORDER BY m.view_count DESC, m.average_rating DESC, m.created_date DESC " +
+            "LIMIT :#{#pageable.pageSize}", nativeQuery = true)
+    List<Movie> findHotFallbackRecommendations(
+            @Param("status") Integer status,
+            @Param("excludedMovieIds") List<Long> excludedMovieIds,
+            Pageable pageable);
+
     @Transactional
     @Modifying
     @Query("update Movie m set m.viewCount = (" +

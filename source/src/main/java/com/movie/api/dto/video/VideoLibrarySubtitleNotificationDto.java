@@ -7,12 +7,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @ApiModel
-public class VideoLibraryNotificationDto {
-    private String id;
-    private String name;
-    private Long duration;
-    private Integer state;
+public class VideoLibrarySubtitleNotificationDto {
+    private String videoLibraryId;
     private String thumbnailUrl;
-    private String reason;
     private Integer sourceType;
+    private String id;
+    private String language;
+    private String label;
+    private Integer state;
 }

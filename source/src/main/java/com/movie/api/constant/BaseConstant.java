@@ -135,6 +135,7 @@ public class BaseConstant {
 
     public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
     public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
+    public static final Integer USER_MOVIE_TYPE_DISLIKED = 3;
 
     public static final Integer ROOM_KIND_PRIVATE = 0;
     public static final Integer ROOM_KIND_PUBLIC = 1;

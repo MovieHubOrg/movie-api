@@ -169,9 +169,9 @@ public class VideoLibraryController extends ABasicController {
         VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getId())
                 .orElseThrow(() -> new NotFoundException("[Video Library] Not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
 
-        if (!Objects.equals(videoLibrary.getSourceType(), BaseConstant.SOURCE_TYPE_INTERNAL)) {
-            throw new BadRequestException("Cannot process audio for external source");
-        }
+//        if (!Objects.equals(videoLibrary.getSourceType(), BaseConstant.SOURCE_TYPE_INTERNAL)) {
+//            throw new BadRequestException("Cannot process audio for external source");
+//        }
         if (!Objects.equals(videoLibrary.getState(), BaseConstant.VIDEO_LIBRARY_STATE_READY)) {
             throw new BadRequestException("Video state not ready", ErrorCode.VIDEO_LIBRARY_ERROR_INVALID_STATE);
         }
@@ -184,9 +184,12 @@ public class VideoLibraryController extends ABasicController {
         }
 
         videoLibrary.setAudioState(BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING);
+        videoLibraryRepository.save(videoLibrary);
 
         ConvertAudioForm data = new ConvertAudioForm();
         data.setVideoId(videoLibrary.getId());
+        data.setSourceType(videoLibrary.getSourceType());
+        data.setContent(videoLibrary.getContent());
 
         String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + convertVideoQueue;
         rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_CONVERT_AUDIO);

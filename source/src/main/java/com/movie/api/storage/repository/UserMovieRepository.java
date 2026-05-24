@@ -26,10 +26,15 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
 
     List<UserMovie> findByUserId(Long userId);
 
+    List<UserMovie> findByUserIdOrderByModifiedDateDesc(Long userId, Pageable pageable);
+
     List<UserMovie> findByUserIdAndTypeOrderByModifiedDateDesc(Long userId, Integer type, Pageable pageable);
 
     @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
     List<Long> findMovieIdsByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
+
+    @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type IN :types")
+    List<Long> findMovieIdsByUserIdAndTypeIn(@Param("userId") Long userId, @Param("types") List<Integer> types);
 
     @Query("SELECT um.movieId FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
     List<Movie> findAllByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type, Pageable pageable);

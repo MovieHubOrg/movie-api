@@ -37,6 +37,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MovieService {
+    private static final int RECOMMENDATION_SEED_LIMIT = 10;
+
     @Autowired
     private MovieRepository movieRepository;
 
@@ -247,29 +249,53 @@ public class MovieService {
             return cachedMovies;
         }
 
-        List<UserMovie> recentFavouriteUserMovies = userMovieRepository.findByUserIdAndTypeOrderByModifiedDateDesc(
+        List<UserMovie> recentUserMovies = userMovieRepository.findByUserIdOrderByModifiedDateDesc(
                 userId,
-                BaseConstant.USER_MOVIE_TYPE_INTERESTED,
-                PageRequest.of(0, 5)
+                PageRequest.of(0, RECOMMENDATION_SEED_LIMIT)
         );
 
-        List<Long> favouriteMovieIds = recentFavouriteUserMovies.stream()
+        List<Long> seedMovieIds = recentUserMovies.stream()
+                .filter(userMovie -> !Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_DISLIKED))
+                .sorted(Comparator.comparingInt(this::getRecommendationSeedWeight).reversed())
                 .map(UserMovie::getMovieId)
                 .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
 
-        List<Movie> favouriteMovies = findActiveMoviesByIds(favouriteMovieIds);
+        List<Movie> seedMovies = findActiveMoviesByIds(seedMovieIds);
 
-
-        Set<Long> excludedMovieIds = userMovieRepository.findMovieIdsByUserIdAndType(userId, BaseConstant.USER_MOVIE_TYPE_WATCHED)
-                .stream()
+        Set<Long> excludedMovieIds = new LinkedHashSet<>();
+        excludedMovieIds.addAll(userMovieRepository.findMovieIdsByUserIdAndTypeIn(
+                userId,
+                Arrays.asList(BaseConstant.USER_MOVIE_TYPE_WATCHED, BaseConstant.USER_MOVIE_TYPE_DISLIKED)
+        ));
+        excludedMovieIds.addAll(watchHistoryRepository.findAllWatchedMovieIds(userId));
+        excludedMovieIds.addAll(seedMovieIds);
+        excludedMovieIds = excludedMovieIds.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        excludedMovieIds.addAll(favouriteMovieIds);
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        List<MovieDto> recommendedMovies = findSuggestedMovies(favouriteMovies, excludedMovieIds, recommendationLimit);
+        List<MovieDto> recommendedMovies = findSuggestedMovies(seedMovies, excludedMovieIds, recommendationLimit);
+        recommendedMovies = fillWithFallbackMovies(recommendedMovies, excludedMovieIds, recommendationLimit);
         redisService.put(key, recommendedMovies, 30 * 60); // cache 30 minutes
         return recommendedMovies;
+    }
+
+    @Transactional
+    public void applyReviewRatingPreference(Long userId, Long movieId, Integer rating) {
+        Integer userMovieType = resolveReviewUserMovieType(rating);
+        if (userMovieType == null || userId == null || movieId == null) {
+            return;
+        }
+
+        UserMovie userMovie = userMovieRepository.findByUserIdAndMovieId(userId, movieId).orElse(null);
+        if (userMovie == null) {
+            userMovie = new UserMovie();
+            userMovie.setUserId(userId);
+            userMovie.setMovieId(movieId);
+            userMovie.setType(userMovieType);
+        }
+        userMovieRepository.save(userMovie);
     }
 
     @Transactional(readOnly = true)
@@ -362,12 +388,13 @@ public class MovieService {
         }
 
         int recommendationLimit = limit > 0 ? limit : 10;
+        Set<Long> excludedIds = excludedMovieIds == null ? Collections.emptySet() : excludedMovieIds;
         Map<Long, MovieDto> recommendedMovies = new LinkedHashMap<>();
-        int candidateLimit = Math.max(recommendationLimit * 3, recommendationLimit + Math.min(excludedMovieIds.size(), 50));
+        int candidateLimit = Math.max(recommendationLimit * 3, recommendationLimit + Math.min(excludedIds.size(), 50));
         for (Movie movie : movies) {
             List<MovieDto> suggestedMovies = getCachedSuggestedMovies(movie, candidateLimit);
             for (MovieDto suggestedMovie : suggestedMovies) {
-                if (suggestedMovie.getId() == null || excludedMovieIds.contains(suggestedMovie.getId())) {
+                if (suggestedMovie.getId() == null || excludedIds.contains(suggestedMovie.getId())) {
                     continue;
                 }
                 recommendedMovies.putIfAbsent(suggestedMovie.getId(), suggestedMovie);
@@ -380,6 +407,90 @@ public class MovieService {
             }
         }
         return new ArrayList<>(recommendedMovies.values());
+    }
+
+    private List<MovieDto> fillWithFallbackMovies(List<MovieDto> recommendedMovies, Set<Long> excludedMovieIds, int limit) {
+        int recommendationLimit = limit > 0 ? limit : 10;
+        Map<Long, MovieDto> recommendedMovieById = new LinkedHashMap<>();
+        Set<Long> fallbackExcludedMovieIds = new LinkedHashSet<>();
+        if (excludedMovieIds != null) {
+            fallbackExcludedMovieIds.addAll(excludedMovieIds);
+        }
+
+        for (MovieDto movie : recommendedMovies) {
+            if (movie == null || movie.getId() == null || fallbackExcludedMovieIds.contains(movie.getId())) {
+                continue;
+            }
+            recommendedMovieById.putIfAbsent(movie.getId(), movie);
+            fallbackExcludedMovieIds.add(movie.getId());
+            if (recommendedMovieById.size() >= recommendationLimit) {
+                return new ArrayList<>(recommendedMovieById.values());
+            }
+        }
+
+        List<Movie> featuredMovies = movieRepository.findFeaturedFallbackRecommendations(
+                BaseConstant.STATUS_ACTIVE,
+                normalizeExcludedMovieIds(fallbackExcludedMovieIds),
+                PageRequest.of(0, recommendationLimit - recommendedMovieById.size())
+        );
+        appendFallbackMovies(recommendedMovieById, fallbackExcludedMovieIds, featuredMovies, recommendationLimit);
+
+        if (recommendedMovieById.size() < recommendationLimit) {
+            List<Movie> hotMovies = movieRepository.findHotFallbackRecommendations(
+                    BaseConstant.STATUS_ACTIVE,
+                    normalizeExcludedMovieIds(fallbackExcludedMovieIds),
+                    PageRequest.of(0, recommendationLimit - recommendedMovieById.size())
+            );
+            appendFallbackMovies(recommendedMovieById, fallbackExcludedMovieIds, hotMovies, recommendationLimit);
+        }
+
+        return new ArrayList<>(recommendedMovieById.values());
+    }
+
+    private void appendFallbackMovies(Map<Long, MovieDto> recommendedMovieById, Set<Long> excludedMovieIds, List<Movie> movies, int limit) {
+        List<MovieDto> movieDtos = movieMapper.fromEntityToMovieAutoCompleteDtoList(movies);
+        for (MovieDto movie : movieDtos) {
+            if (movie == null || movie.getId() == null || excludedMovieIds.contains(movie.getId())) {
+                continue;
+            }
+            recommendedMovieById.putIfAbsent(movie.getId(), movie);
+            excludedMovieIds.add(movie.getId());
+            if (recommendedMovieById.size() >= limit) {
+                return;
+            }
+        }
+    }
+
+    private List<Long> normalizeExcludedMovieIds(Collection<Long> excludedMovieIds) {
+        if (excludedMovieIds == null || excludedMovieIds.isEmpty()) {
+            return Collections.singletonList(-1L);
+        }
+        return excludedMovieIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), ids -> ids.isEmpty() ? Collections.singletonList(-1L) : ids));
+    }
+
+    private int getRecommendationSeedWeight(UserMovie userMovie) {
+        if (userMovie == null) {
+            return 0;
+        }
+        if (Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_INTERESTED)) {
+            return 3;
+        }
+        if (Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_WATCHED)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    private Integer resolveReviewUserMovieType(Integer rating) {
+        if (rating == null) {
+            return null;
+        }
+        if (rating >= 3) {
+            return BaseConstant.USER_MOVIE_TYPE_INTERESTED;
+        }
+        return BaseConstant.USER_MOVIE_TYPE_DISLIKED;
     }
 
     private List<Movie> findActiveMoviesByIds(List<Long> movieIds) {
