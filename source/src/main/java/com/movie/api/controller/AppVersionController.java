@@ -11,6 +11,7 @@ import com.movie.api.form.appVersion.CreateAppVersionForm;
 import com.movie.api.form.appVersion.UpdateAppVersionForm;
 import com.movie.api.mapper.AppVersionMapper;
 import com.movie.api.service.MediaService;
+import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.AppVersionCriteria;
 import com.movie.api.storage.model.AppVersion;
 import com.movie.api.storage.repository.AppVersionRepository;
@@ -33,6 +34,8 @@ import java.util.Objects;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @Slf4j
 public class AppVersionController extends ABasicController {
+    private static final int APP_VERSION_LATEST_CACHE_TTL = 5 * 60;
+
     @Autowired
     private AppVersionRepository appVersionRepository;
 
@@ -41,6 +44,9 @@ public class AppVersionController extends ABasicController {
 
     @Autowired
     private MediaService mediaService;
+
+    @Autowired
+    private RedisService redisService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('APP_V_C')")
@@ -57,6 +63,7 @@ public class AppVersionController extends ABasicController {
 
         AppVersion appVersion = appVersionMapper.fromCreateAppVersionFormToEntity(form);
         appVersionRepository.save(appVersion);
+        clearLatestAppVersionCache();
         return makeSuccessResponse("Create app version success");
     }
 
@@ -76,6 +83,21 @@ public class AppVersionController extends ABasicController {
                 Sort.by(Sort.Order.desc("createdDate")));
         Page<AppVersion> appVersions = appVersionRepository.findAll(criteria.getSpecification(), pageable);
         return makeSuccessResponse(makeResponseListDto(appVersions, appVersionMapper::fromEntityToAppVersionDtoList), "List app version success");
+    }
+
+    @GetMapping(value = "/latest", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<AppVersionDto> getLatest() {
+        String key = buildLatestAppVersionCacheKey();
+        AppVersionDto cached = redisService.get(key, AppVersionDto.class);
+        if (cached != null) {
+            return makeSuccessResponse(cached, "Get latest app version success.");
+        }
+
+        AppVersion appVersion = appVersionRepository.findLatest()
+                .orElseThrow(() -> new NotFoundException("[App Version] Not found latest", ErrorCode.APP_VERSION_ERROR_NOT_FOUND));
+        AppVersionDto response = appVersionMapper.entityToAppVersionPublicDto(appVersion);
+        redisService.put(key, response, APP_VERSION_LATEST_CACHE_TTL);
+        return makeSuccessResponse(response, "Get latest app version success.");
     }
 
     @PutMapping(value = "/update", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -102,6 +124,7 @@ public class AppVersionController extends ABasicController {
 
         appVersionMapper.fromUpdateAppVersionFormToEntity(form, appVersion);
         appVersionRepository.save(appVersion);
+        clearLatestAppVersionCache();
 
         return makeSuccessResponse("Update app version success");
     }
@@ -117,6 +140,7 @@ public class AppVersionController extends ABasicController {
 
         mediaService.deleteFile(appVersion.getFilePath());
         appVersionRepository.delete(appVersion);
+        clearLatestAppVersionCache();
         return makeSuccessResponse("Delete app version success.");
     }
 
@@ -133,5 +157,13 @@ public class AppVersionController extends ABasicController {
         checkAppVersionDto.setForceUpdate(latestVersion.getForceUpdate());
         checkAppVersionDto.setLatestVersion(appVersionMapper.entityToAppVersionDto(latestVersion));
         return makeSuccessResponse(checkAppVersionDto, "Check app version success.");
+    }
+
+    private String buildLatestAppVersionCacheKey() {
+        return redisService.buildKey("app-version", "latest");
+    }
+
+    private void clearLatestAppVersionCache() {
+        redisService.delete(buildLatestAppVersionCacheKey());
     }
 }

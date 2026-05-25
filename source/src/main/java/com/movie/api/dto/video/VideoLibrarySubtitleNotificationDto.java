@@ -9,6 +9,7 @@ import lombok.Setter;
 @ApiModel
 public class VideoLibrarySubtitleNotificationDto {
     private String videoLibraryId;
+    private String name;
     private String thumbnailUrl;
     private Integer sourceType;
     private String id;

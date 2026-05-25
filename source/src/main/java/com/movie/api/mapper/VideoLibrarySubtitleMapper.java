@@ -30,6 +30,7 @@ public interface VideoLibrarySubtitleMapper {
 
     @Mapping(source = "id", target = "id")
     @Mapping(source = "videoLibrary.id", target = "videoLibraryId")
+    @Mapping(source = "videoLibrary.name", target = "name")
     @Mapping(source = "videoLibrary.thumbnailUrl", target = "thumbnailUrl")
     @Mapping(source = "videoLibrary.sourceType", target = "sourceType")
     @Mapping(source = "language", target = "language")
