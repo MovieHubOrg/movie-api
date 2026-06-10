@@ -28,6 +28,14 @@ public interface AppVersionMapper {
     @IterableMapping(elementTargetType = AppVersionDto.class, qualifiedByName = "entityToAppVersionDto")
     List<AppVersionDto> fromEntityToAppVersionDtoList(List<AppVersion> appVersions);
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "code", target = "code")
+    @Mapping(source = "name", target = "name")
+    @Mapping(source = "filePath", target = "filePath")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToAppVersionPublicDto")
+    AppVersionDto entityToAppVersionPublicDto(AppVersion appVersion);
+
     @Mapping(source = "code", target = "code")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "filePath", target = "filePath")

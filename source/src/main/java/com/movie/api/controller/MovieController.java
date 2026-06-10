@@ -136,6 +136,9 @@ public class MovieController extends ABasicController {
     @Autowired
     private ImdbService imdbService;
 
+    private static final int DEFAULT_RECOMMENDATION_LIMIT = 20;
+    private static final int MAX_RECOMMENDATION_LIMIT = 100;
+
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('MOV_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateMovieForm form) {
@@ -467,11 +470,36 @@ public class MovieController extends ABasicController {
     }
 
     @GetMapping(value = "/recommendation/recent-watched-category", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<List<RecentWatchedCategoryRecommendationDto>> recentWatchedCategoryRecommendation() {
+    public ApiMessageDto<RecentWatchedCategoryRecommendationDto> recentWatchedCategoryRecommendation() {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
-        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 5, 10), "List recent watched recommendation movie success");
+        return makeSuccessResponse(movieService.getRecentWatchedCategoryRecommendationsForUser(user.getId(), 10), "Recent watched category recommendation success");
+    }
+
+    @GetMapping(value = "/recommendation/knn", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<ResponseListDto<List<MovieDto>>> recommendationByKnn(@RequestParam(value = "k", defaultValue = "20") Integer k) {
+        Account user = accountRepository.findByIdAndStatusAndKind(
+                        getCurrentUser(),
+                        BaseConstant.STATUS_ACTIVE,
+                        BaseConstant.ACCOUNT_KIND_USER
+                )
+                .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
+
+        Pageable pageable = PageRequest.of(0, normalizeLimit(k));
+        Page<Movie> movies = movieService.getHybridRecommendationsForUser(user.getId(), pageable);
+
+        return makeSuccessResponse(
+                makeResponseListDto(movies, movieMapper::fromEntityToMovieAutoCompleteDtoList),
+                "List movie recommendation success"
+        );
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return DEFAULT_RECOMMENDATION_LIMIT;
+        }
+        return Math.min(limit, MAX_RECOMMENDATION_LIMIT);
     }
 
     @GetMapping(value = "/history", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -563,7 +591,7 @@ public class MovieController extends ABasicController {
             throw new BadRequestException("[Survey] At least 3 valid movies are required", ErrorCode.SURVEY_ERROR_MIN_MOVIES);
         }
 
-        List<UserMovie> existingUserMovies = userMovieRepository.findByUserId(user.getId());
+        List<UserMovie> existingUserMovies = userMovieRepository.findByUserIdAndType(user.getId(), BaseConstant.USER_MOVIE_TYPE_SURVEY);
         Set<Long> existingMovieIds = existingUserMovies.stream()
                 .map(UserMovie::getMovieId)
                 .collect(Collectors.toSet());
@@ -574,7 +602,9 @@ public class MovieController extends ABasicController {
                     UserMovie userMovie = new UserMovie();
                     userMovie.setUserId(user.getId());
                     userMovie.setMovieId(movie.getId());
-                    userMovie.setType(BaseConstant.USER_MOVIE_TYPE_INTERESTED);
+                    userMovie.setType(BaseConstant.USER_MOVIE_TYPE_SURVEY);
+                    userMovie.setSource(BaseConstant.USER_MOVIE_SOURCE_SURVEY);
+                    userMovie.setValue(3.0);
                     return userMovie;
                 })
                 .collect(Collectors.toList());
@@ -594,7 +624,7 @@ public class MovieController extends ABasicController {
         Account user = accountRepository.findByIdAndStatusAndKind(userId, BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] Not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
 
-        userMovieRepository.deleteByUserIdAndType(user.getId(), BaseConstant.USER_MOVIE_TYPE_INTERESTED);
+        userMovieRepository.deleteByUserIdAndType(user.getId(), BaseConstant.USER_MOVIE_TYPE_SURVEY);
         updateMakeSurveyStatus(user, false);
         return makeSuccessResponse("Reset survey success");
     }

@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = DatabaseConstant.PREFIX_TABLE + "video_library")
@@ -50,10 +51,19 @@ public class VideoLibrary extends Auditable<String> {
 
     private Integer state; // 0: PROCESSING, 1: READY, 2: ERROR
 
+    @Column(name = "audio_state")
+    private Integer audioState; // 0: PROCESSING, 1: READY, 2: ERROR
+
+    @Column(name = "audio_url")
+    private String audioUrl;
+
     @Column(name = "reason")
     private String reason;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "server_config_id")
     private ServerConfig serverConfig;
+
+    @OneToMany(mappedBy = "videoLibrary", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VideoLibrarySubtitle> subtitles;
 }

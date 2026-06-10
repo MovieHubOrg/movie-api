@@ -17,14 +17,23 @@ import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.MovieCriteria;
 import com.movie.api.storage.model.Category;
 import com.movie.api.storage.model.Movie;
+import com.movie.api.storage.model.MovieSimilarity;
 import com.movie.api.storage.model.MovieItem;
 import com.movie.api.storage.model.UserMovie;
+import com.movie.api.storage.model.UserMovieRecommendation;
+import com.movie.api.storage.model.UserMovieScore;
+import com.movie.api.storage.repository.MovieSimilarityRepository;
 import com.movie.api.storage.repository.MovieRepository;
+import com.movie.api.storage.repository.UserMovieRecommendationRepository;
+import com.movie.api.storage.repository.UserMovieScoreRepository;
 import com.movie.api.storage.repository.UserMovieRepository;
 import com.movie.api.storage.repository.WatchHistoryRepository;
 import com.movie.api.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,6 +46,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MovieService {
+    private static final int RECOMMENDATION_SEED_LIMIT = 10;
+    private static final int KNN_RECOMMENDATION_SEED_LIMIT = 20;
+
     @Autowired
     private MovieRepository movieRepository;
 
@@ -59,7 +71,22 @@ public class MovieService {
     private UserMovieRepository userMovieRepository;
 
     @Autowired
+    private UserMovieScoreRepository userMovieScoreRepository;
+
+    @Autowired
+    private MovieSimilarityRepository movieSimilarityRepository;
+
+    @Autowired
+    private UserMovieRecommendationRepository userMovieRecommendationRepository;
+
+    @Autowired
+    private UserMovieService userMovieService;
+
+    @Autowired
     private WatchHistoryRepository watchHistoryRepository;
+
+    @Value("${recommendation.hybrid.model-version:hybrid-v1}")
+    private String hybridRecommendationModelVersion;
 
     /**
      * Calculate reviewCount và averageRating for Movie.
@@ -247,50 +274,265 @@ public class MovieService {
             return cachedMovies;
         }
 
-        List<UserMovie> recentFavouriteUserMovies = userMovieRepository.findByUserIdAndTypeOrderByModifiedDateDesc(
+        List<UserMovie> recentUserMovies = userMovieRepository.findByUserIdOrderByModifiedDateDesc(
                 userId,
-                BaseConstant.USER_MOVIE_TYPE_INTERESTED,
-                PageRequest.of(0, 5)
+                PageRequest.of(0, RECOMMENDATION_SEED_LIMIT)
         );
 
-        List<Long> favouriteMovieIds = recentFavouriteUserMovies.stream()
+        List<Long> seedMovieIds = recentUserMovies.stream()
+                .filter(userMovie -> !Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_DISLIKED))
+                .sorted(Comparator.comparingInt(this::getRecommendationSeedWeight).reversed())
                 .map(UserMovie::getMovieId)
                 .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
 
-        List<Movie> favouriteMovies = findActiveMoviesByIds(favouriteMovieIds);
+        List<Movie> seedMovies = findActiveMoviesByIds(seedMovieIds);
 
-
-        Set<Long> excludedMovieIds = userMovieRepository.findMovieIdsByUserIdAndType(userId, BaseConstant.USER_MOVIE_TYPE_WATCHED)
-                .stream()
+        Set<Long> excludedMovieIds = new LinkedHashSet<>();
+        excludedMovieIds.addAll(userMovieRepository.findMovieIdsByUserIdAndTypeIn(
+                userId,
+                Arrays.asList(BaseConstant.USER_MOVIE_TYPE_WATCHED, BaseConstant.USER_MOVIE_TYPE_DISLIKED)
+        ));
+        excludedMovieIds.addAll(watchHistoryRepository.findAllWatchedMovieIds(userId));
+        excludedMovieIds.addAll(seedMovieIds);
+        excludedMovieIds = excludedMovieIds.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        excludedMovieIds.addAll(favouriteMovieIds);
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        List<MovieDto> recommendedMovies = findSuggestedMovies(favouriteMovies, excludedMovieIds, recommendationLimit);
+        List<MovieDto> recommendedMovies = findSuggestedMovies(seedMovies, excludedMovieIds, recommendationLimit);
+        recommendedMovies = fillWithFallbackMovies(recommendedMovies, excludedMovieIds, recommendationLimit);
         redisService.put(key, recommendedMovies, 30 * 60); // cache 30 minutes
         return recommendedMovies;
     }
 
     @Transactional(readOnly = true)
-    public List<RecentWatchedCategoryRecommendationDto> getRecentWatchedCategoryRecommendationsForUser(Long userId, int categoryLimit, int movieLimit) {
-        int recommendationCategoryLimit = categoryLimit > 0 ? categoryLimit : 5;
+    public Page<Movie> getHybridRecommendationsForUser(Long userId, Pageable pageable) {
+        Pageable recommendationPageable = pageable != null ? pageable : PageRequest.of(0, 20);
+        List<UserMovieRecommendation> recommendations = userMovieRecommendationRepository
+                .findByUserIdAndModelVersionAndStatusOrderByScoreDesc(
+                        userId,
+                        hybridRecommendationModelVersion,
+                        BaseConstant.STATUS_ACTIVE,
+                        recommendationPageable
+                );
+
+        if (recommendations.isEmpty()) {
+            log.info("Hybrid recommendation userId={}, modelVersion={}, recommendationCount=0, fallback=true",
+                    userId,
+                    hybridRecommendationModelVersion);
+            return getFallbackRecommendationMovies(recommendationPageable);
+        }
+
+        List<Long> recommendedMovieIds = recommendations.stream()
+                .map(UserMovieRecommendation::getMovieId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (recommendedMovieIds.isEmpty()) {
+            log.info("Hybrid recommendation userId={}, modelVersion={}, recommendationCount={}, activeMovieCount=0, fallback=true",
+                    userId,
+                    hybridRecommendationModelVersion,
+                    recommendations.size());
+            return getFallbackRecommendationMovies(recommendationPageable);
+        }
+
+        List<Movie> movies = movieRepository.findAllByIdInAndStatus(recommendedMovieIds, BaseConstant.STATUS_ACTIVE);
+        Map<Long, Movie> movieById = movies.stream()
+                .collect(Collectors.toMap(Movie::getId, Function.identity(), (a, b) -> a));
+        List<Movie> sortedMovies = recommendedMovieIds.stream()
+                .map(movieById::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (sortedMovies.isEmpty()) {
+            log.info("Hybrid recommendation userId={}, modelVersion={}, recommendationCount={}, activeMovieCount=0, fallback=true",
+                    userId,
+                    hybridRecommendationModelVersion,
+                    recommendations.size());
+            return getFallbackRecommendationMovies(recommendationPageable);
+        }
+
+        log.info("Hybrid recommendation userId={}, modelVersion={}, recommendationCount={}, activeMovieCount={}, fallback=false",
+                userId,
+                hybridRecommendationModelVersion,
+                recommendations.size(),
+                sortedMovies.size());
+        return new PageImpl<>(sortedMovies, recommendationPageable, sortedMovies.size());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Movie> getRecommendationsByKnn(Long userId, Pageable pageable) {
+        Pageable recommendationPageable = pageable != null ? pageable : PageRequest.of(0, 20);
+        List<UserMovieScore> seedScores = userMovieScoreRepository.findPositiveScoresByUserId(
+                userId,
+                BaseConstant.USER_MOVIE_SCORE_MODEL_VERSION,
+                PageRequest.of(0, KNN_RECOMMENDATION_SEED_LIMIT)
+        );
+
+        if (seedScores.isEmpty()) {
+            return getFallbackRecommendationMovies(userId, recommendationPageable, 0, 0, 0);
+        }
+
+        Map<Long, Double> userScoreByMovieId = seedScores.stream()
+                .filter(score -> score.getMovieId() != null && score.getScore() != null && score.getScore() > 0)
+                .collect(Collectors.toMap(
+                        UserMovieScore::getMovieId,
+                        UserMovieScore::getScore,
+                        Math::max,
+                        LinkedHashMap::new
+                ));
+
+        if (userScoreByMovieId.isEmpty()) {
+            return getFallbackRecommendationMovies(userId, recommendationPageable, seedScores.size(), 0, 0);
+        }
+
+        Set<Long> seedMovieIds = new LinkedHashSet<>(userScoreByMovieId.keySet());
+        List<MovieSimilarity> similarities = movieSimilarityRepository.findByMovieIdsAndModelVersion(
+                seedMovieIds,
+                BaseConstant.MOVIE_SIMILARITY_MODEL_VERSION_ITEM_KNN
+        );
+
+        if (similarities.isEmpty()) {
+            return getFallbackRecommendationMovies(userId, recommendationPageable, seedMovieIds.size(), 0, 0);
+        }
+
+        Set<Long> excludedMovieIds = userMovieScoreRepository.findByUserId(userId)
+                .stream()
+                .map(UserMovieScore::getMovieId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        excludedMovieIds.addAll(seedMovieIds);
+
+        Map<Long, Double> candidateScoreMap = new HashMap<>();
+        for (MovieSimilarity similarity : similarities) {
+            Long sourceMovieId = similarity.getMovieId();
+            Long candidateMovieId = similarity.getSimilarMovieId();
+            Double similarityScore = similarity.getScore();
+
+            if (sourceMovieId == null || candidateMovieId == null || excludedMovieIds.contains(candidateMovieId)) {
+                continue;
+            }
+
+            Double userScore = userScoreByMovieId.get(sourceMovieId);
+            if (userScore == null || userScore <= 0 || similarityScore == null || similarityScore <= 0) {
+                continue;
+            }
+
+            double finalScore = Math.min(userScore, 10.0) * similarityScore;
+            candidateScoreMap.merge(candidateMovieId, finalScore, Double::sum);
+        }
+
+        if (candidateScoreMap.isEmpty()) {
+            return getFallbackRecommendationMovies(userId, recommendationPageable, seedMovieIds.size(), similarities.size(), 0);
+        }
+
+        List<Long> sortedCandidateMovieIds = candidateScoreMap.entrySet()
+                .stream()
+                .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        int fromIndex = (int) Math.min(recommendationPageable.getOffset(), sortedCandidateMovieIds.size());
+        int toIndex = Math.min(fromIndex + recommendationPageable.getPageSize(), sortedCandidateMovieIds.size());
+        List<Long> pageCandidateMovieIds = sortedCandidateMovieIds.subList(fromIndex, toIndex);
+
+        List<Movie> movies = movieRepository.findAllByIdInAndStatus(pageCandidateMovieIds, BaseConstant.STATUS_ACTIVE);
+        Map<Long, Movie> movieById = movies.stream()
+                .collect(Collectors.toMap(Movie::getId, Function.identity(), (a, b) -> a));
+
+        List<Movie> sortedMovies = pageCandidateMovieIds.stream()
+                .map(movieById::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (sortedMovies.isEmpty()) {
+            return getFallbackRecommendationMovies(
+                    userId,
+                    recommendationPageable,
+                    seedMovieIds.size(),
+                    similarities.size(),
+                    candidateScoreMap.size()
+            );
+        }
+
+        log.info("KNN recommendation userId={}, seedCount={}, similarityCount={}, candidateCount={}, fallback=false",
+                userId,
+                seedMovieIds.size(),
+                similarities.size(),
+                candidateScoreMap.size());
+        return new PageImpl<>(sortedMovies, recommendationPageable, sortedCandidateMovieIds.size());
+    }
+
+    private Page<Movie> getFallbackRecommendationMovies(Long userId,
+                                                        Pageable pageable,
+                                                        int seedCount,
+                                                        int similarityCount,
+                                                        int candidateCount) {
+        log.info("KNN recommendation userId={}, seedCount={}, similarityCount={}, candidateCount={}, fallback=true",
+                userId,
+                seedCount,
+                similarityCount,
+                candidateCount);
+        return getFallbackRecommendationMovies(pageable);
+    }
+
+    private Page<Movie> getFallbackRecommendationMovies(Pageable pageable) {
+        Pageable fallbackPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+
+        return movieRepository.findActiveFallbackRecommendations(BaseConstant.STATUS_ACTIVE, fallbackPageable);
+    }
+
+    @Transactional
+    public void applyReviewRatingPreference(Long userId, Long movieId, Integer rating) {
+        if (userId == null || movieId == null) {
+            return;
+        }
+
+        Integer userMovieType = resolveReviewUserMovieType(rating);
+        if (userMovieType == null) {
+            deleteReviewRatingPreference(userId, movieId);
+            return;
+        }
+
+        userMovieService.saveSignalBySource(
+                userId,
+                movieId,
+                null,
+                userMovieType,
+                BaseConstant.USER_MOVIE_SOURCE_REVIEW,
+                Objects.equals(userMovieType, BaseConstant.USER_MOVIE_TYPE_DISLIKED) ? -5.0 : rating.doubleValue()
+        );
+    }
+
+    @Transactional
+    public void deleteReviewRatingPreference(Long userId, Long movieId) {
+        userMovieService.deleteSignalBySource(userId, movieId, BaseConstant.USER_MOVIE_SOURCE_REVIEW);
+    }
+
+    @Transactional(readOnly = true)
+    public RecentWatchedCategoryRecommendationDto getRecentWatchedCategoryRecommendationsForUser(Long userId, int movieLimit) {
         int recommendationMovieLimit = movieLimit > 0 ? movieLimit : 10;
         String key = redisService.buildKey(
                 "movie",
                 "recommendation",
                 "recent-watched-category",
+                "v3",
                 userId.toString()
         );
-        List<RecentWatchedCategoryRecommendationDto> cachedRecommendations = redisService.get(key, new TypeReference<>() {
+        RecentWatchedCategoryRecommendationDto cached = redisService.get(key, new TypeReference<>() {
         });
-        if (cachedRecommendations != null) {
-            return cachedRecommendations;
+        if (cached != null) {
+            return cached;
         }
 
         List<Movie> recentWatchedMovies = watchHistoryRepository.findWatchedMoviesByUserOrderByDate(userId, PageRequest.of(0, 3));
         if (recentWatchedMovies.isEmpty()) {
-            return Collections.emptyList();
+            return null;
         }
 
         List<Long> excludedMovieIds = recentWatchedMovies
@@ -303,44 +545,57 @@ public class MovieService {
             excludedMovieIds.add(-1L);
         }
 
-        Map<Long, CategoryRecommendationSignal> categorySignals = new LinkedHashMap<>();
-        for (int index = 0; index < recentWatchedMovies.size(); index++) {
-            Movie movie = recentWatchedMovies.get(index);
+        Map<Long, Integer> countByCategoryId = new HashMap<>();
+        Map<Long, Category> categoryById = new HashMap<>();
+        Map<Long, Integer> firstMovieIndexByCategoryId = new HashMap<>();
+        for (int movieIndex = 0; movieIndex < recentWatchedMovies.size(); movieIndex++) {
+            Movie movie = recentWatchedMovies.get(movieIndex);
             if (movie.getCategories() == null) {
                 continue;
             }
-            int recencyScore = recentWatchedMovies.size() - index;
-            for (Category category : movie.getCategories()) {
-                if (category == null || category.getId() == null) {
+            Set<Long> seenCategoryIdInMovie = new HashSet<>();
+            for (Category candidate : movie.getCategories()) {
+                if (candidate == null || candidate.getId() == null) {
                     continue;
                 }
-                CategoryRecommendationSignal signal = categorySignals.computeIfAbsent(
-                        category.getId(),
-                        id -> new CategoryRecommendationSignal(category)
-                );
-                signal.addScore(recencyScore);
+                Long categoryId = candidate.getId();
+                if (!seenCategoryIdInMovie.add(categoryId)) {
+                    continue;
+                }
+                categoryById.putIfAbsent(categoryId, candidate);
+                countByCategoryId.merge(categoryId, 1, Integer::sum);
+                firstMovieIndexByCategoryId.putIfAbsent(categoryId, movieIndex);
             }
         }
 
-        List<RecentWatchedCategoryRecommendationDto> recommendations = categorySignals.values().stream()
-                .sorted(Comparator.comparing(CategoryRecommendationSignal::getScore).reversed())
-                .limit(recommendationCategoryLimit)
-                .map(signal -> {
-                    List<Movie> movies = movieRepository.findRecommendationByCategory(
-                            signal.getCategory().getId(),
-                            excludedMovieIds,
-                            PageRequest.of(0, recommendationMovieLimit)
-                    );
-                    RecentWatchedCategoryRecommendationDto dto = new RecentWatchedCategoryRecommendationDto();
-                    dto.setCategory(categoryMapper.entityToCategoryAutoCompleteDto(signal.getCategory()));
-                    dto.setMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies));
-                    return dto;
-                })
-                .filter(dto -> dto.getMovies() != null && !dto.getMovies().isEmpty())
-                .collect(Collectors.toList());
+        if (countByCategoryId.isEmpty()) {
+            return null;
+        }
 
-        redisService.put(key, recommendations, 30 * 60); // cache 30 minutes
-        return recommendations;
+        Long bestCategoryId = countByCategoryId.entrySet().stream()
+                .max(Comparator.<Map.Entry<Long, Integer>>comparingInt(Map.Entry::getValue)
+                        .thenComparingInt(e -> -firstMovieIndexByCategoryId.get(e.getKey())))
+                .map(Map.Entry::getKey)
+                .orElse(null);
+        Category category = bestCategoryId != null ? categoryById.get(bestCategoryId) : null;
+        if (category == null) {
+            return null;
+        }
+
+        List<Movie> movies = movieRepository.findRecommendationByCategory(
+                category.getId(),
+                excludedMovieIds,
+                PageRequest.of(0, recommendationMovieLimit)
+        );
+        if (movies == null || movies.isEmpty()) {
+            return null;
+        }
+
+        RecentWatchedCategoryRecommendationDto dto = new RecentWatchedCategoryRecommendationDto();
+        dto.setCategory(categoryMapper.entityToCategoryAutoCompleteDto(category));
+        dto.setMovies(movieMapper.fromEntityToMovieAutoCompleteDtoList(movies));
+        redisService.put(key, dto, 30 * 60); // cache 30 minutes
+        return dto;
     }
 
     public List<MovieDto> findSuggestedMovies(List<Movie> movies, Set<Long> excludedMovieIds, int limit) {
@@ -349,12 +604,13 @@ public class MovieService {
         }
 
         int recommendationLimit = limit > 0 ? limit : 10;
+        Set<Long> excludedIds = excludedMovieIds == null ? Collections.emptySet() : excludedMovieIds;
         Map<Long, MovieDto> recommendedMovies = new LinkedHashMap<>();
-        int candidateLimit = Math.max(recommendationLimit * 3, recommendationLimit + Math.min(excludedMovieIds.size(), 50));
+        int candidateLimit = Math.max(recommendationLimit * 3, recommendationLimit + Math.min(excludedIds.size(), 50));
         for (Movie movie : movies) {
             List<MovieDto> suggestedMovies = getCachedSuggestedMovies(movie, candidateLimit);
             for (MovieDto suggestedMovie : suggestedMovies) {
-                if (suggestedMovie.getId() == null || excludedMovieIds.contains(suggestedMovie.getId())) {
+                if (suggestedMovie.getId() == null || excludedIds.contains(suggestedMovie.getId())) {
                     continue;
                 }
                 recommendedMovies.putIfAbsent(suggestedMovie.getId(), suggestedMovie);
@@ -367,6 +623,90 @@ public class MovieService {
             }
         }
         return new ArrayList<>(recommendedMovies.values());
+    }
+
+    private List<MovieDto> fillWithFallbackMovies(List<MovieDto> recommendedMovies, Set<Long> excludedMovieIds, int limit) {
+        int recommendationLimit = limit > 0 ? limit : 10;
+        Map<Long, MovieDto> recommendedMovieById = new LinkedHashMap<>();
+        Set<Long> fallbackExcludedMovieIds = new LinkedHashSet<>();
+        if (excludedMovieIds != null) {
+            fallbackExcludedMovieIds.addAll(excludedMovieIds);
+        }
+
+        for (MovieDto movie : recommendedMovies) {
+            if (movie == null || movie.getId() == null || fallbackExcludedMovieIds.contains(movie.getId())) {
+                continue;
+            }
+            recommendedMovieById.putIfAbsent(movie.getId(), movie);
+            fallbackExcludedMovieIds.add(movie.getId());
+            if (recommendedMovieById.size() >= recommendationLimit) {
+                return new ArrayList<>(recommendedMovieById.values());
+            }
+        }
+
+        List<Movie> featuredMovies = movieRepository.findFeaturedFallbackRecommendations(
+                BaseConstant.STATUS_ACTIVE,
+                normalizeExcludedMovieIds(fallbackExcludedMovieIds),
+                PageRequest.of(0, recommendationLimit - recommendedMovieById.size())
+        );
+        appendFallbackMovies(recommendedMovieById, fallbackExcludedMovieIds, featuredMovies, recommendationLimit);
+
+        if (recommendedMovieById.size() < recommendationLimit) {
+            List<Movie> hotMovies = movieRepository.findHotFallbackRecommendations(
+                    BaseConstant.STATUS_ACTIVE,
+                    normalizeExcludedMovieIds(fallbackExcludedMovieIds),
+                    PageRequest.of(0, recommendationLimit - recommendedMovieById.size())
+            );
+            appendFallbackMovies(recommendedMovieById, fallbackExcludedMovieIds, hotMovies, recommendationLimit);
+        }
+
+        return new ArrayList<>(recommendedMovieById.values());
+    }
+
+    private void appendFallbackMovies(Map<Long, MovieDto> recommendedMovieById, Set<Long> excludedMovieIds, List<Movie> movies, int limit) {
+        List<MovieDto> movieDtos = movieMapper.fromEntityToMovieAutoCompleteDtoList(movies);
+        for (MovieDto movie : movieDtos) {
+            if (movie == null || movie.getId() == null || excludedMovieIds.contains(movie.getId())) {
+                continue;
+            }
+            recommendedMovieById.putIfAbsent(movie.getId(), movie);
+            excludedMovieIds.add(movie.getId());
+            if (recommendedMovieById.size() >= limit) {
+                return;
+            }
+        }
+    }
+
+    private List<Long> normalizeExcludedMovieIds(Collection<Long> excludedMovieIds) {
+        if (excludedMovieIds == null || excludedMovieIds.isEmpty()) {
+            return Collections.singletonList(-1L);
+        }
+        return excludedMovieIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), ids -> ids.isEmpty() ? Collections.singletonList(-1L) : ids));
+    }
+
+    private int getRecommendationSeedWeight(UserMovie userMovie) {
+        if (userMovie == null) {
+            return 0;
+        }
+        if (Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_INTERESTED)) {
+            return 3;
+        }
+        if (Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_WATCHED)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    private Integer resolveReviewUserMovieType(Integer rating) {
+        if (rating == null) {
+            return null;
+        }
+        if (rating >= 3) {
+            return BaseConstant.USER_MOVIE_TYPE_REVIEW;
+        }
+        return BaseConstant.USER_MOVIE_TYPE_DISLIKED;
     }
 
     private List<Movie> findActiveMoviesByIds(List<Long> movieIds) {
@@ -382,27 +722,6 @@ public class MovieService {
                 .map(movieById::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-    }
-
-    private static class CategoryRecommendationSignal {
-        private final Category category;
-        private int score;
-
-        private CategoryRecommendationSignal(Category category) {
-            this.category = category;
-        }
-
-        private Category getCategory() {
-            return category;
-        }
-
-        private int getScore() {
-            return score;
-        }
-
-        private void addScore(int value) {
-            score += value;
-        }
     }
 
     public void updateMetaDataMovie(MovieItem movieItem) {

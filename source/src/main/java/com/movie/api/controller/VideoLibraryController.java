@@ -4,13 +4,11 @@ import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
+import com.movie.api.dto.video.ConvertAudioForm;
 import com.movie.api.dto.video.VideoLibraryDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
-import com.movie.api.form.video.CreateVideoLibraryForm;
-import com.movie.api.form.video.ExternalVideoLibraryForm;
-import com.movie.api.form.video.RetryProcessVideoLibraryForm;
-import com.movie.api.form.video.UpdateVideoLibraryForm;
+import com.movie.api.form.video.*;
 import com.movie.api.mapper.VideoLibraryMapper;
 import com.movie.api.service.rabbit.RabbitService;
 import com.movie.api.storage.criteria.VideoLibraryCriteria;
@@ -82,15 +80,7 @@ public class VideoLibraryController extends ABasicController {
             VideoLibraryDto data = new VideoLibraryDto();
             data.setId(videoLibrary.getId());
             data.setContent(videoLibrary.getContent());
-            rabbitService.handleSendMsg(
-                    appName,
-                    convertVideoQueue,
-                    data,
-                    BaseConstant.CMD_CONVERT_VIDEO,
-                    null,
-                    null,
-                    null
-            );
+            rabbitService.handleSendMsg(appName, convertVideoQueue, data, BaseConstant.CMD_CONVERT_VIDEO);
         }
         return makeSuccessResponse("Create videoLibrary success");
     }
@@ -105,7 +95,7 @@ public class VideoLibraryController extends ABasicController {
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('VID_L_L')")
-    public ApiMessageDto<ResponseListDto<List<VideoLibraryDto>>> list(VideoLibraryCriteria criteria, Pageable pageable) {
+    public ApiMessageDto<ResponseListDto<List<VideoLibraryDto>>> listlist(VideoLibraryCriteria criteria, Pageable pageable) {
         pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("createdDate").descending());
 
         Page<VideoLibrary> videoLibraries = videoLibraryRepository.findAll(criteria.getSpecification(), pageable);
@@ -169,26 +159,55 @@ public class VideoLibraryController extends ABasicController {
         data.setContent(videoLibrary.getContent());
 
         String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + convertVideoQueue;
-        rabbitService.handleSendMsg(
-                appName,
-                queueName,
-                data,
-                BaseConstant.CMD_CONVERT_VIDEO,
-                null,
-                null,
-                null
-        );
+        rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_CONVERT_VIDEO);
         return makeSuccessResponse("Retry process video library success");
+    }
+
+    @PutMapping(value = "/process-audio", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('VID_L_U')")
+    public ApiMessageDto<Void> processAudio(@Valid @RequestBody ProcessAudioVideoLibraryForm form) {
+        VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getId())
+                .orElseThrow(() -> new NotFoundException("[Video Library] Not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
+
+//        if (!Objects.equals(videoLibrary.getSourceType(), BaseConstant.SOURCE_TYPE_INTERNAL)) {
+//            throw new BadRequestException("Cannot process audio for external source");
+//        }
+        if (!Objects.equals(videoLibrary.getState(), BaseConstant.VIDEO_LIBRARY_STATE_READY)) {
+            throw new BadRequestException("Video state not ready", ErrorCode.VIDEO_LIBRARY_ERROR_INVALID_STATE);
+        }
+        if (Objects.equals(videoLibrary.getAudioState(), BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING) ||
+                Objects.equals(videoLibrary.getAudioState(), BaseConstant.VIDEO_LIBRARY_STATE_READY)) {
+            throw new BadRequestException("Audio invalid state", ErrorCode.VIDEO_LIBRARY_ERROR_INVALID_STATE);
+        }
+        if (videoLibrary.getServerConfig() == null) {
+            throw new BadRequestException("Cannot process audio because server config is null");
+        }
+
+        videoLibrary.setAudioState(BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING);
+        videoLibraryRepository.save(videoLibrary);
+
+        ConvertAudioForm data = new ConvertAudioForm();
+        data.setVideoId(videoLibrary.getId());
+        data.setSourceType(videoLibrary.getSourceType());
+        data.setContent(videoLibrary.getContent());
+
+        String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + convertVideoQueue;
+        rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_CONVERT_AUDIO);
+        return makeSuccessResponse("Process audio success");
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('VID_L_D')")
-    public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
         VideoLibrary videoLibrary = videoLibraryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Video Library] Not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
 
         // set video_id = null
         movieItemRepository.detachVideoFromMovieItem(videoLibrary.getId());
+
+        if (Objects.equals(videoLibrary.getState(), BaseConstant.VIDEO_LIBRARY_STATE_PROCESSING)) {
+            throw new BadRequestException("Cannot delete video processing", ErrorCode.VIDEO_LIBRARY_ERROR_INVALID_STATE);
+        }
 
         if (videoLibrary.getServerConfig() == null) {
             throw new BadRequestException("Cannot delete video library because server config is null");
@@ -198,15 +217,7 @@ public class VideoLibraryController extends ABasicController {
         data.setId(id);
 
         String queueName = videoLibrary.getServerConfig().getServerNumber() + "_" + streamingQueue;
-        rabbitService.handleSendMsg(
-                appName,
-                queueName,
-                data,
-                BaseConstant.CMD_DELETE_VIDEO,
-                null,
-                null,
-                null
-        );
+        rabbitService.handleSendMsg(appName, queueName, data, BaseConstant.CMD_DELETE_VIDEO);
 
         videoLibraryRepository.delete(videoLibrary);
         return makeSuccessResponse("Delete video library success");

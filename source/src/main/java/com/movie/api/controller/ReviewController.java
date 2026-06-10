@@ -85,6 +85,7 @@ public class ReviewController extends ABasicController {
         reviewRepository.save(review);
 
         ReviewStatisticsDto statistics = movieService.calculateReview(movie.getId(), review.getRate(), BaseConstant.ACTION_ADD);
+        movieService.applyReviewRatingPreference(user.getId(), movie.getId(), review.getRate());
         ReviewDto reviewDto = reviewMapper.entityToReviewDto(review);
         reviewDto.setStatistics(statistics);
         return makeSuccessResponse(reviewDto, "Create review success");
@@ -120,6 +121,7 @@ public class ReviewController extends ABasicController {
         return makeSuccessResponse(makeResponseListDto(reviews, reviewMapper::fromEntityToReviewDtoList), "Get list review success");
     }
 
+    @Transactional
     @PatchMapping(value = "/update", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('REV_U')")
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateReviewForm form) {
@@ -130,8 +132,20 @@ public class ReviewController extends ABasicController {
             throw new UnauthorizationException("Not allow");
         }
 
+        Integer oldRate = review.getRate();
         reviewMapper.fromUpdateReviewFormToEntity(form, review);
         reviewRepository.save(review);
+
+        Integer newRate = review.getRate();
+        if (!Objects.equals(oldRate, newRate)) {
+            if (oldRate != null) {
+                movieService.calculateReview(review.getMovieId(), oldRate, BaseConstant.ACTION_DELETE);
+            }
+            if (newRate != null) {
+                movieService.calculateReview(review.getMovieId(), newRate, BaseConstant.ACTION_ADD);
+            }
+        }
+        movieService.applyReviewRatingPreference(review.getAuthor().getId(), review.getMovieId(), newRate);
         return makeSuccessResponse("Update review success");
     }
 
@@ -170,6 +184,10 @@ public class ReviewController extends ABasicController {
     }
 
     private void createVoteNotificationTemplate(Review review, Account voter, Integer reactionType) {
+        if (Objects.equals(review.getAuthor().getId(), voter.getId())) {
+            return;
+        }
+
         ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
         Movie movie = movieRepository.findById(review.getMovieId())
                 .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
@@ -219,6 +237,7 @@ public class ReviewController extends ABasicController {
 
         reactionRepository.deleteByReviewId(review.getId());
         reviewRepository.delete(review);
+        movieService.deleteReviewRatingPreference(review.getAuthor().getId(), review.getMovieId());
 
         ReviewStatisticsDto statistics = movieService.calculateReview(review.getMovieId(), review.getRate(), BaseConstant.ACTION_DELETE);
         return makeSuccessResponse(statistics, "Delete review success");

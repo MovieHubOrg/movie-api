@@ -13,7 +13,6 @@ import java.util.List;
 
 @Data
 public class SidebarCriteria {
-
     private Long id;
     private Boolean active;
 

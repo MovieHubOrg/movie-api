@@ -1,5 +1,6 @@
 package com.movie.api.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.movie.api.constant.BaseConstant;
 import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
@@ -13,6 +14,7 @@ import com.movie.api.form.sidebar.CreateSidebarForm;
 import com.movie.api.form.sidebar.UpdateSidebarForm;
 import com.movie.api.mapper.SidebarMapper;
 import com.movie.api.service.MediaService;
+import com.movie.api.service.redis.RedisService;
 import com.movie.api.storage.criteria.SidebarCriteria;
 import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.model.Sidebar;
@@ -41,6 +43,8 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @Slf4j
 public class SidebarController extends ABasicController {
+    private static final String SIDEBAR_LIST_CACHE_KEY = "sidebars";
+    private static final int SIDEBAR_LIST_CACHE_TTL = 5 * 60;
 
     @Autowired
     private SidebarRepository sidebarRepository;
@@ -53,6 +57,9 @@ public class SidebarController extends ABasicController {
 
     @Autowired
     private MediaService mediaService;
+
+    @Autowired
+    private RedisService redisService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SDB_C')")
@@ -70,11 +77,12 @@ public class SidebarController extends ABasicController {
         sidebar.setOrdering(ordering);
 
         sidebarRepository.save(sidebar);
+        clearSidebarListCache();
         return makeSuccessResponse("Create sidebar success");
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<SidebarDto> get(@PathVariable("id") Long id) {
+    public ApiMessageDto<SidebarDto> get(@PathVariable Long id) {
         Sidebar sidebar = sidebarRepository.findByIdAndActive(id, BaseConstant.SIDEBAR_ACTIVE_TRUE)
                 .orElseThrow(() -> new NotFoundException("[Sidebar] Not found", ErrorCode.SIDEBAR_ERROR_NOT_FOUND));
 
@@ -83,7 +91,7 @@ public class SidebarController extends ABasicController {
 
     @GetMapping(value = "/admin/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SDB_V')")
-    public ApiMessageDto<SidebarDto> getForAdmin(@PathVariable("id") Long id) {
+    public ApiMessageDto<SidebarDto> getForAdmin(@PathVariable Long id) {
         Sidebar sidebar = sidebarRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Sidebar] Not found", ErrorCode.SIDEBAR_ERROR_NOT_FOUND));
 
@@ -91,12 +99,22 @@ public class SidebarController extends ABasicController {
     }
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<ResponseListDto<List<SidebarDto>>> list(SidebarCriteria criteria, Pageable pageable) {
-        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(new Sort.Order(Sort.Direction.ASC, "ordering")));
+    public ApiMessageDto<ResponseListDto<List<SidebarDto>>> list() {
+        Pageable pageable = PageRequest.of(0, 100, Sort.by(new Sort.Order(Sort.Direction.ASC, "ordering")));
+        SidebarCriteria criteria = new SidebarCriteria();
         criteria.setActive(BaseConstant.SIDEBAR_ACTIVE_TRUE);
-        Page<Sidebar> sidebars = sidebarRepository.findAll(criteria.getSpecification(), pageable);
 
-        return makeSuccessResponse(makeResponseListDto(sidebars, sidebarMapper::fromEntityToSidebarDtoList), "List sidebar success");
+        ResponseListDto<List<SidebarDto>> cached = redisService.get(SIDEBAR_LIST_CACHE_KEY, new TypeReference<>() {
+        });
+        if (cached != null) {
+            return makeSuccessResponse(cached, "List sidebar success");
+        }
+
+        Page<Sidebar> sidebars = sidebarRepository.findAll(criteria.getSpecification(), pageable);
+        ResponseListDto<List<SidebarDto>> response = makeResponseListDto(sidebars, sidebarMapper::fromEntityToSidebarDtoList);
+        redisService.put(SIDEBAR_LIST_CACHE_KEY, response, SIDEBAR_LIST_CACHE_TTL);
+
+        return makeSuccessResponse(response, "List sidebar success");
     }
 
     @GetMapping(value = "/admin/list", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -135,12 +153,13 @@ public class SidebarController extends ABasicController {
         sidebarMapper.fromUpdateSidebarFormToEntity(form, sidebar);
 
         sidebarRepository.save(sidebar);
+        clearSidebarListCache();
         return makeSuccessResponse("Update sidebar success");
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SDB_D')")
-    public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
+    public ApiMessageDto<Void> delete(@PathVariable Long id) {
         Sidebar sidebar = sidebarRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Sidebar] Not found", ErrorCode.SIDEBAR_ERROR_NOT_FOUND));
 
@@ -150,6 +169,7 @@ public class SidebarController extends ABasicController {
         mediaService.deleteFiles(deletedFile);
 
         sidebarRepository.delete(sidebar);
+        clearSidebarListCache();
         return makeSuccessResponse("Delete sidebar success");
     }
 
@@ -176,6 +196,7 @@ public class SidebarController extends ABasicController {
             item.setOrdering(orderingMap.get(item.getId()));
         }
         sidebarRepository.saveAll(sidebars);
+        clearSidebarListCache();
 
         return makeSuccessResponse("Update ordering sidebar success");
     }
@@ -188,6 +209,11 @@ public class SidebarController extends ABasicController {
                 .orElseThrow(() -> new NotFoundException("[Sidebar] Not found", ErrorCode.SIDEBAR_ERROR_NOT_FOUND));
         sidebar.setActive(form.getActive());
         sidebarRepository.save(sidebar);
+        clearSidebarListCache();
         return makeSuccessResponse("Change active success");
+    }
+
+    private void clearSidebarListCache() {
+        redisService.delete(SIDEBAR_LIST_CACHE_KEY);
     }
 }

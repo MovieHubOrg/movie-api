@@ -10,6 +10,7 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.favourite.CreateFavouriteForm;
 import com.movie.api.mapper.FavouriteMapper;
+import com.movie.api.service.UserMovieService;
 import com.movie.api.storage.criteria.FavouriteCriteria;
 import com.movie.api.storage.model.Account;
 import com.movie.api.storage.model.Favourite;
@@ -24,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -51,6 +53,10 @@ public class FavouriteController extends ABasicController {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private UserMovieService userMovieService;
+
+    @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Long> create(@Valid @RequestBody CreateFavouriteForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
@@ -77,6 +83,7 @@ public class FavouriteController extends ABasicController {
         }
 
         favourite = favouriteRepository.save(favourite);
+        saveFavouriteUserMovie(user.getId(), form.getType(), form.getTargetId());
         return makeSuccessResponse(favourite.getId(), "Create favourite success");
     }
 
@@ -99,11 +106,13 @@ public class FavouriteController extends ABasicController {
         return makeSuccessResponse(makeResponseListDto(favourites, favouriteMapper::fromEntityToFavouriteDtoList), "List favourite success");
     }
 
+    @Transactional
     @DeleteMapping(value = "/delete", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> delete(@RequestParam("targetId") Long targetId, @RequestParam("type") Integer type) {
         Favourite favourite = favouriteRepository.findByUserIdAndTypeAndTargetId(getCurrentUser(), type, targetId)
                 .orElseThrow(() -> new NotFoundException("[Favourite] Not found", ErrorCode.FAVOURITE_ERROR_NOT_FOUND));
         favouriteRepository.delete(favourite);
+        deleteFavouriteUserMovie(getCurrentUser(), type, targetId);
         return makeSuccessResponse("Delete favourite success");
     }
 
@@ -119,5 +128,33 @@ public class FavouriteController extends ABasicController {
             throw new BadRequestException("Invalid type");
         }
         return makeSuccessResponse(new ListIdDto(ids), "List favourite success");
+    }
+
+    private void saveFavouriteUserMovie(Long userId, Integer type, Long movieId) {
+        if (!Objects.equals(type, BaseConstant.FAVOURITE_TYPE_MOVIE)) {
+            return;
+        }
+
+        userMovieService.saveSignal(
+                userId,
+                movieId,
+                null,
+                BaseConstant.USER_MOVIE_TYPE_FAVORITE,
+                BaseConstant.USER_MOVIE_SOURCE_FAVORITE,
+                1.0
+        );
+    }
+
+    private void deleteFavouriteUserMovie(Long userId, Integer type, Long movieId) {
+        if (!Objects.equals(type, BaseConstant.FAVOURITE_TYPE_MOVIE)) {
+            return;
+        }
+
+        userMovieService.deleteSignal(
+                userId,
+                movieId,
+                BaseConstant.USER_MOVIE_TYPE_FAVORITE,
+                BaseConstant.USER_MOVIE_SOURCE_FAVORITE
+        );
     }
 }

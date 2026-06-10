@@ -118,7 +118,7 @@ public class CommentController extends ABasicController {
 
         commentRepository.save(comment);
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
-        if (comment.getReplyTo() != null) {
+        if (comment.getReplyTo() != null && !Objects.equals(author.getId(), comment.getReplyTo().getId())) {
             createReplyNotificationTemplate(comment, author, comment.getReplyTo(), movie);
         }
         return makeSuccessResponse(commentMapper.entityToCommentDto(comment), "Create comment success");
@@ -235,6 +235,10 @@ public class CommentController extends ABasicController {
     }
 
     private void createVoteNotificationTemplate(Comment comment, Account voter, Integer reactionType) {
+        if (Objects.equals(comment.getAuthor().getId(), voter.getId())) {
+            return;
+        }
+
         Movie movie = movieRepository.findById(comment.getMovieId())
                 .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
         CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);

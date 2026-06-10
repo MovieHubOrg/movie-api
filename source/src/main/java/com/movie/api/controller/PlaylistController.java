@@ -15,6 +15,7 @@ import com.movie.api.form.playlist.UpdatePlaylistForm;
 import com.movie.api.form.playlist.UpdatePlaylistItemForm;
 import com.movie.api.mapper.PlaylistItemMapper;
 import com.movie.api.mapper.PlaylistMapper;
+import com.movie.api.service.UserMovieService;
 import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.*;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -55,6 +57,9 @@ public class PlaylistController extends ABasicController {
 
     @Autowired
     private PlaylistItemMapper playlistItemMapper;
+
+    @Autowired
+    private UserMovieService userMovieService;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<PlaylistDto> create(@Valid @RequestBody CreatePlaylistForm form) {
@@ -94,12 +99,18 @@ public class PlaylistController extends ABasicController {
         return makeSuccessResponse("Update playlist success");
     }
 
+    @Transactional
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> delete(@PathVariable("id") Long id) {
         Playlist playlist = playlistRepository.findByIdAndUserId(id, getCurrentUser())
                 .orElseThrow(() -> new NotFoundException("[Playlist] Not found", ErrorCode.PLAYLIST_ERROR_NOT_FOUND));
+        List<PlaylistItem> playlistItems = playlistItemRepository.findByPlaylistId(playlist.getId());
         playlistItemRepository.deleteByPlaylistId(playlist.getId());
         playlistRepository.delete(playlist);
+        for (PlaylistItem playlistItem : playlistItems) {
+            Long movieId = playlistItem.getMovie() != null ? playlistItem.getMovie().getId() : null;
+            deletePlaylistUserMovieIfUnused(playlist.getUser().getId(), movieId);
+        }
         return makeSuccessResponse("Delete playlist success");
     }
 
@@ -119,6 +130,7 @@ public class PlaylistController extends ABasicController {
         return makeSuccessResponse(new ListIdDto(ids), "List movie success");
     }
 
+    @Transactional
     @PostMapping(value = "/update-item", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> updateItem(@Valid @RequestBody UpdatePlaylistItemForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
@@ -153,6 +165,7 @@ public class PlaylistController extends ABasicController {
         return makeSuccessResponse("Update playlist success");
     }
 
+    @Transactional
     @DeleteMapping(value = "/remove-item", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> removeItem(@RequestParam("playlistId") Long playlistId, @RequestParam("movieId") Long movieId) {
         Playlist playlist = playlistRepository.findByIdAndUserId(playlistId, getCurrentUser())
@@ -178,6 +191,7 @@ public class PlaylistController extends ABasicController {
         item.setPlaylist(playlist);
         item.setMovie(movie);
         playlistItemRepository.save(item);
+        savePlaylistUserMovie(playlist.getUser().getId(), movie.getId());
 
         // Update totalMovie
         playlistRepository.updateTotalMovie(playlist.getId(), playlist.getTotalMovie() + 1);
@@ -197,11 +211,36 @@ public class PlaylistController extends ABasicController {
 
         // Delete playlist item
         playlistItemRepository.deleteByPlaylistIdAndMovieId(playlist.getId(), movie.getId());
+        deletePlaylistUserMovieIfUnused(playlist.getUser().getId(), movie.getId());
 
         int totalMove = playlist.getTotalMovie() > 0 ? playlist.getTotalMovie() - 1 : 0;
         // Update totalMovie
         playlistRepository.updateTotalMovie(playlist.getId(), totalMove);
 
         log.info("Removed movie {} from playlist {}", movie.getId(), playlist.getId());
+    }
+
+    private void savePlaylistUserMovie(Long userId, Long movieId) {
+        userMovieService.saveSignal(
+                userId,
+                movieId,
+                null,
+                BaseConstant.USER_MOVIE_TYPE_PLAYLIST,
+                BaseConstant.USER_MOVIE_SOURCE_PLAYLIST,
+                1.0
+        );
+    }
+
+    private void deletePlaylistUserMovieIfUnused(Long userId, Long movieId) {
+        if (userId == null || movieId == null || playlistItemRepository.existsByUserIdAndMovieId(userId, movieId)) {
+            return;
+        }
+
+        userMovieService.deleteSignal(
+                userId,
+                movieId,
+                BaseConstant.USER_MOVIE_TYPE_PLAYLIST,
+                BaseConstant.USER_MOVIE_SOURCE_PLAYLIST
+        );
     }
 }

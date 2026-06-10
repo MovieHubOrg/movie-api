@@ -21,6 +21,14 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
 
     List<Movie> findAllByIdInAndStatus(List<Long> ids, Integer status);
 
+    @Query(value = "SELECT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "ORDER BY m.is_featured DESC, m.view_count DESC, m.created_date DESC",
+            countQuery = "SELECT COUNT(*) FROM db_movie m WHERE m.status = :status",
+            nativeQuery = true)
+    Page<Movie> findActiveFallbackRecommendations(@Param("status") Integer status, Pageable pageable);
+
     List<Movie> findAllByImdbIdIsNotNull();
 
     boolean existsByCategories_Id(Long categoryId);
@@ -137,6 +145,29 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
             "LIMIT :#{#pageable.pageSize}", nativeQuery = true)
     List<Movie> findRecommendationByCategory(
             @Param("categoryId") Long categoryId,
+            @Param("excludedMovieIds") List<Long> excludedMovieIds,
+            Pageable pageable);
+
+    @Query(value = "SELECT DISTINCT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "AND m.is_featured = 1 " +
+            "AND m.id NOT IN (:excludedMovieIds) " +
+            "ORDER BY m.view_count DESC, m.average_rating DESC, m.created_date DESC " +
+            "LIMIT :#{#pageable.pageSize}", nativeQuery = true)
+    List<Movie> findFeaturedFallbackRecommendations(
+            @Param("status") Integer status,
+            @Param("excludedMovieIds") List<Long> excludedMovieIds,
+            Pageable pageable);
+
+    @Query(value = "SELECT DISTINCT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "AND m.id NOT IN (:excludedMovieIds) " +
+            "ORDER BY m.view_count DESC, m.average_rating DESC, m.created_date DESC " +
+            "LIMIT :#{#pageable.pageSize}", nativeQuery = true)
+    List<Movie> findHotFallbackRecommendations(
+            @Param("status") Integer status,
             @Param("excludedMovieIds") List<Long> excludedMovieIds,
             Pageable pageable);
 

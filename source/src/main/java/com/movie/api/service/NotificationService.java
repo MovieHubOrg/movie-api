@@ -99,15 +99,7 @@ public class NotificationService {
         log.info("Created {} notifications for cmd {}", notifications.size(), cmd);
 
         SendNotificationForm sendNotificationForm = buildSendNotificationForm(title, cmd, notificationBody, type, targetType, targetValue, accounts);
-        rabbitService.handleSendMsg(
-                appName,
-                updateVideoQueue,
-                sendNotificationForm,
-                BaseConstant.CMD_SEND_NOTIFICATION,
-                null,
-                null,
-                null
-        );
+        rabbitService.handleSendMsg(appName, updateVideoQueue, sendNotificationForm, BaseConstant.CMD_SEND_NOTIFICATION);
     }
 
     @Transactional
@@ -144,15 +136,7 @@ public class NotificationService {
                     template.getTargetValue(),
                     accounts
             );
-            rabbitService.handleSendMsg(
-                    appName,
-                    updateVideoQueue,
-                    sendNotificationForm,
-                    BaseConstant.CMD_SEND_NOTIFICATION,
-                    null,
-                    null,
-                    null
-            );
+            rabbitService.handleSendMsg(appName, updateVideoQueue, sendNotificationForm, BaseConstant.CMD_SEND_NOTIFICATION);
         }
         notificationTemplateRepository.saveAll(templates);
     }

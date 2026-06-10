@@ -10,14 +10,13 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = DatabaseConstant.PREFIX_TABLE + "user_movie",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_watch_history_user_movie",
-                        columnNames = {"user_id", "movie_id"}
-                )
-        },
         indexes = {
-                @Index(name = "idx_user_movie_user_id", columnList = "user_id")
+                @Index(name = "idx_user_movie_user_id", columnList = "user_id"),
+                @Index(name = "idx_user_movie_movie_id", columnList = "movie_id"),
+                @Index(name = "idx_user_movie_type", columnList = "type"),
+                @Index(name = "idx_user_movie_user_movie", columnList = "user_id, movie_id"),
+                @Index(name = "idx_user_movie_user_type", columnList = "user_id, type"),
+                @Index(name = "idx_user_movie_source", columnList = "source")
         })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -29,6 +28,15 @@ public class UserMovie extends Auditable<String> {
     @Column(name = "movie_id")
     private Long movieId;
 
+    @Column(name = "movie_item_id")
+    private Long movieItemId;
+
     @Column(name = "type")
     private Integer type;
+
+    @Column(name = "value")
+    private Double value;
+
+    @Column(name = "source", length = 50)
+    private String source;
 }
