@@ -1,0 +1,209 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1780928942076-1">
+        <dropIndex indexName="uk_watch_history_user_movie" tableName="db_user_movie"/>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-2">
+        <createIndex indexName="idx_user_movie_user_movie" tableName="db_user_movie" unique="false">
+            <column name="user_id"/>
+            <column name="movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-3">
+        <addColumn tableName="db_user_movie">
+            <column name="movie_item_id" type="bigint" afterColumn="movie_id"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-4">
+        <addColumn tableName="db_user_movie">
+            <column name="value" type="double precision" afterColumn="type"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-5">
+        <addColumn tableName="db_user_movie">
+            <column name="source" type="varchar(50)" afterColumn="value"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-6">
+        <createIndex indexName="idx_user_movie_movie_id" tableName="db_user_movie">
+            <column name="movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-7">
+        <createIndex indexName="idx_user_movie_source" tableName="db_user_movie">
+            <column name="source"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-8">
+        <createIndex indexName="idx_user_movie_type" tableName="db_user_movie">
+            <column name="type"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-9">
+        <createIndex indexName="idx_user_movie_user_type" tableName="db_user_movie">
+            <column name="user_id"/>
+            <column name="type"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-10">
+        <createTable tableName="db_movie_similarity">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_movie_similarityPK"/>
+            </column>
+            <column name="movie_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="similar_movie_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(50)"/>
+            <column name="model_version" type="VARCHAR(50)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-11">
+        <createTable tableName="db_user_movie_score">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_user_movie_scorePK"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="movie_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_event_date" type="BIGINT"/>
+            <column name="model_version" type="VARCHAR(50)"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-12">
+        <addUniqueConstraint columnNames="movie_id, similar_movie_id" constraintName="uk_movie_similarity_movie_similar"
+                             tableName="db_movie_similarity"/>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-13">
+        <addUniqueConstraint columnNames="user_id, movie_id" constraintName="uk_user_movie_score_user_movie"
+                             tableName="db_user_movie_score"/>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-14">
+        <createIndex indexName="idx_movie_similarity_movie_id" tableName="db_movie_similarity">
+            <column name="movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-15">
+        <createIndex indexName="idx_movie_similarity_score" tableName="db_movie_similarity">
+            <column name="score"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-16">
+        <createIndex indexName="idx_movie_similarity_similar_movie_id" tableName="db_movie_similarity">
+            <column name="similar_movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-17">
+        <createIndex indexName="idx_user_movie_score_movie_id" tableName="db_user_movie_score">
+            <column name="movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-18">
+        <createIndex indexName="idx_user_movie_score_score" tableName="db_user_movie_score">
+            <column name="score"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-19">
+        <createIndex indexName="idx_user_movie_score_user_id" tableName="db_user_movie_score">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-20">
+        <createTable tableName="db_user_movie_recommendation">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_user_movie_recommendationPK"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="movie_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(100)"/>
+            <column name="model_version" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-21">
+        <addUniqueConstraint columnNames="user_id, movie_id, model_version" constraintName="uk_user_movie_recommendation_user_movie_model" tableName="db_user_movie_recommendation"/>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-22">
+        <createIndex indexName="idx_user_movie_recommendation_movie_id" tableName="db_user_movie_recommendation">
+            <column name="movie_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-23">
+        <createIndex indexName="idx_user_movie_recommendation_score" tableName="db_user_movie_recommendation">
+            <column name="score"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="Movie" id="1780928942076-24">
+        <createIndex indexName="idx_user_movie_recommendation_user_model_status" tableName="db_user_movie_recommendation">
+            <column name="user_id"/>
+            <column name="model_version"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

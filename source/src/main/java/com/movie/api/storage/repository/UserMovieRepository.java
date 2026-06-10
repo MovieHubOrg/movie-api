@@ -24,7 +24,31 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
     @Query("DELETE FROM UserMovie um WHERE um.userId = :userId AND um.type = :type")
     void deleteByUserIdAndType(@Param("userId") Long userId, @Param("type") Integer type);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UserMovie um WHERE um.source IN :sources")
+    int deleteBySourceIn(@Param("sources") List<String> sources);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UserMovie um WHERE um.userId = :userId AND um.movieId = :movieId AND um.type = :type AND um.source = :source")
+    int deleteByUserIdAndMovieIdAndTypeAndSource(@Param("userId") Long userId,
+                                                 @Param("movieId") Long movieId,
+                                                 @Param("type") Integer type,
+                                                 @Param("source") String source);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UserMovie um WHERE um.userId = :userId AND um.movieId = :movieId AND um.source = :source")
+    int deleteByUserIdAndMovieIdAndSource(@Param("userId") Long userId,
+                                          @Param("movieId") Long movieId,
+                                          @Param("source") String source);
+
     List<UserMovie> findByUserId(Long userId);
+
+    List<UserMovie> findByUserIdAndType(Long userId, Integer type);
+
+    List<UserMovie> findByUserIdAndMovieId(Long userId, Long movieId);
 
     List<UserMovie> findByUserIdOrderByModifiedDateDesc(Long userId, Pageable pageable);
 
@@ -41,7 +65,9 @@ public interface UserMovieRepository extends JpaRepository<UserMovie, Long>, Jpa
 
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 
-    Optional<UserMovie> findByUserIdAndMovieId(Long userId, Long movieId);
+    Optional<UserMovie> findFirstByUserIdAndMovieIdAndSourceOrderByModifiedDateDesc(Long userId, Long movieId, String source);
+
+    Optional<UserMovie> findFirstByUserIdAndMovieIdAndTypeAndSourceOrderByModifiedDateDesc(Long userId, Long movieId, Integer type, String source);
 
     @Query("SELECT DISTINCT um.userId " +
             "FROM UserMovie um " +

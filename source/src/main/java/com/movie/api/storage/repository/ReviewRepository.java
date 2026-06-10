@@ -51,4 +51,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     Long countByStatusAndCreatedDateBetween(@Param("status") Integer status,
                                             @Param("fromDate") Date fromDate,
                                             @Param("toDate") Date toDate);
+
+    @Query("SELECT r FROM Review r " +
+            "WHERE r.status = :status " +
+            "AND r.author IS NOT NULL " +
+            "AND r.movieId IS NOT NULL " +
+            "AND r.rate IS NOT NULL")
+    List<Review> findRecommendationSignals(@Param("status") Integer status);
 }

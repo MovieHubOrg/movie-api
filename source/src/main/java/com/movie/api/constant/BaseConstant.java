@@ -133,9 +133,23 @@ public class BaseConstant {
 
     public static final Integer MAX_PLAYLIST_PER_USER = 5;
 
-    public static final Integer USER_MOVIE_TYPE_INTERESTED = 1;
+    public static final Integer USER_MOVIE_TYPE_SURVEY = 1;
+    public static final Integer USER_MOVIE_TYPE_INTERESTED = USER_MOVIE_TYPE_SURVEY;
     public static final Integer USER_MOVIE_TYPE_WATCHED = 2;
     public static final Integer USER_MOVIE_TYPE_DISLIKED = 3;
+    public static final Integer USER_MOVIE_TYPE_FAVORITE = 4;
+    public static final Integer USER_MOVIE_TYPE_PLAYLIST = 5;
+    public static final Integer USER_MOVIE_TYPE_REVIEW = 6;
+    public static final Integer USER_MOVIE_TYPE_WATCH_PROGRESS = 7;
+
+    public static final String USER_MOVIE_SOURCE_SURVEY = "SURVEY";
+    public static final String USER_MOVIE_SOURCE_WATCH_HISTORY = "WATCH_HISTORY";
+    public static final String USER_MOVIE_SOURCE_REVIEW = "REVIEW";
+    public static final String USER_MOVIE_SOURCE_FAVORITE = "FAVORITE";
+    public static final String USER_MOVIE_SOURCE_PLAYLIST = "PLAYLIST";
+    public static final String USER_MOVIE_SOURCE_MANUAL = "MANUAL";
+    public static final String USER_MOVIE_SCORE_MODEL_VERSION = "user-movie-score-v1";
+    public static final String MOVIE_SIMILARITY_MODEL_VERSION_ITEM_KNN = "item-knn-v1";
 
     public static final Integer ROOM_KIND_PRIVATE = 0;
     public static final Integer ROOM_KIND_PUBLIC = 1;

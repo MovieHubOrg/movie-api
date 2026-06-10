@@ -8,16 +8,17 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.form.watchHistory.TrackingWatchHistoryForm;
 import com.movie.api.mapper.WatchHistoryMapper;
+import com.movie.api.service.UserMovieService;
 import com.movie.api.storage.criteria.WatchHistoryCriteria;
 import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.AccountRepository;
 import com.movie.api.storage.repository.MovieItemRepository;
-import com.movie.api.storage.repository.UserMovieRepository;
 import com.movie.api.storage.repository.WatchHistoryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -47,8 +48,9 @@ public class WatchHistoryController extends ABasicController {
     private AccountRepository accountRepository;
 
     @Autowired
-    private UserMovieRepository userMovieRepository;
+    private UserMovieService userMovieService;
 
+    @Transactional
     @PostMapping(value = "/tracking", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> tracking(@Valid @RequestBody TrackingWatchHistoryForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
@@ -85,6 +87,7 @@ public class WatchHistoryController extends ABasicController {
             watchHistory.setTimesWatched(watchHistory.getTimesWatched() + 1);
         }
         watchHistoryRepository.save(watchHistory);
+        saveWatchProgress(user.getId(), movieItem, adjustedWatchSeconds, endOfVideo);
 
         WatchHistory movieWatchHistory = watchHistoryRepository.findWatchHistoryMovie(movieItem.getMovie().getId(), user.getId()).orElse(null);
         if (movieWatchHistory == null) {
@@ -97,7 +100,7 @@ public class WatchHistoryController extends ABasicController {
         boolean isCompletedMovie = checkCompletedMovie(movieWatchHistory);
         if (isCompletedMovie && !movieWatchHistory.getIsCompleted()) {
             movieWatchHistory.setTimesWatched(movieWatchHistory.getTimesWatched() + 1);
-            saveUserMovieIfNotExist(user.getId(), movieItem.getMovie().getId());
+            saveWatchedUserMovie(user.getId(), movieItem.getMovie().getId());
         }
         movieWatchHistory.setIsCompleted(isCompletedMovie);
         watchHistoryRepository.save(movieWatchHistory);
@@ -137,9 +140,23 @@ public class WatchHistoryController extends ABasicController {
         return makeSuccessResponse(listWatchHistoryDto, "List watch movie success");
     }
 
+    @Transactional
     @DeleteMapping(value = "/delete/{movieId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<Void> delete(@PathVariable("movieId") Long movieId) {
-        watchHistoryRepository.softDeleteByUserIdAndMovieId(BaseConstant.STATUS_DELETE, getCurrentUser(), movieId);
+        Long userId = getCurrentUser();
+        watchHistoryRepository.softDeleteByUserIdAndMovieId(BaseConstant.STATUS_DELETE, userId, movieId);
+        userMovieService.deleteSignal(
+                userId,
+                movieId,
+                BaseConstant.USER_MOVIE_TYPE_WATCHED,
+                BaseConstant.USER_MOVIE_SOURCE_WATCH_HISTORY
+        );
+        userMovieService.deleteSignal(
+                userId,
+                movieId,
+                BaseConstant.USER_MOVIE_TYPE_WATCH_PROGRESS,
+                BaseConstant.USER_MOVIE_SOURCE_WATCH_HISTORY
+        );
         return makeSuccessResponse("Delete watch history success");
     }
 
@@ -154,16 +171,37 @@ public class WatchHistoryController extends ABasicController {
         return Objects.equals(totalCompleted, targetTotal);
     }
 
-    private void saveUserMovieIfNotExist(Long userId, Long movieId) {
-        UserMovie userMovie = userMovieRepository.findByUserIdAndMovieId(userId, movieId).orElse(null);
-        if (userMovie == null) {
-            userMovie = new UserMovie();
-            userMovie.setUserId(userId);
-            userMovie.setMovieId(movieId);
+    private void saveWatchProgress(Long userId, MovieItem movieItem, Long lastWatchSeconds, Long endOfVideo) {
+        Long movieId = movieItem.getMovie() != null ? movieItem.getMovie().getId() : null;
+        Double progressValue = userMovieService.calculateWatchProgressValue(lastWatchSeconds, endOfVideo);
+        if (progressValue <= 0) {
+            userMovieService.deleteSignal(
+                    userId,
+                    movieId,
+                    BaseConstant.USER_MOVIE_TYPE_WATCH_PROGRESS,
+                    BaseConstant.USER_MOVIE_SOURCE_WATCH_HISTORY
+            );
+            return;
         }
-        if (userMovie.getType() == null || !Objects.equals(userMovie.getType(), BaseConstant.USER_MOVIE_TYPE_WATCHED)) {
-            userMovie.setType(BaseConstant.USER_MOVIE_TYPE_WATCHED);
-            userMovieRepository.save(userMovie);
-        }
+
+        userMovieService.saveSignal(
+                userId,
+                movieId,
+                movieItem.getId(),
+                BaseConstant.USER_MOVIE_TYPE_WATCH_PROGRESS,
+                BaseConstant.USER_MOVIE_SOURCE_WATCH_HISTORY,
+                progressValue
+        );
+    }
+
+    private void saveWatchedUserMovie(Long userId, Long movieId) {
+        userMovieService.saveSignal(
+                userId,
+                movieId,
+                null,
+                BaseConstant.USER_MOVIE_TYPE_WATCHED,
+                BaseConstant.USER_MOVIE_SOURCE_WATCH_HISTORY,
+                1.0
+        );
     }
 }

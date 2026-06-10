@@ -69,4 +69,12 @@ public interface FavouriteRepository extends JpaRepository<Favourite, Long>, Jpa
     Long countByStatusAndCreatedDateBetween(@Param("status") Integer status,
                                             @Param("fromDate") Date fromDate,
                                             @Param("toDate") Date toDate);
+
+    @Query("SELECT f FROM Favourite f " +
+            "WHERE f.status = :status " +
+            "AND f.type = :type " +
+            "AND f.user IS NOT NULL " +
+            "AND f.movie IS NOT NULL")
+    List<Favourite> findRecommendationMovieSignals(@Param("status") Integer status,
+                                                   @Param("type") Integer type);
 }

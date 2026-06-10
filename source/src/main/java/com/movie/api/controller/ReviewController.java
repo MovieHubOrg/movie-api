@@ -237,6 +237,7 @@ public class ReviewController extends ABasicController {
 
         reactionRepository.deleteByReviewId(review.getId());
         reviewRepository.delete(review);
+        movieService.deleteReviewRatingPreference(review.getAuthor().getId(), review.getMovieId());
 
         ReviewStatisticsDto statistics = movieService.calculateReview(review.getMovieId(), review.getRate(), BaseConstant.ACTION_DELETE);
         return makeSuccessResponse(statistics, "Delete review success");

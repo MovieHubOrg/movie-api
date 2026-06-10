@@ -81,6 +81,23 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
             Pageable pageable
     );
 
+    @Query("SELECT wh FROM WatchHistory wh " +
+            "WHERE wh.status = :status " +
+            "AND wh.user IS NOT NULL " +
+            "AND wh.movie IS NOT NULL " +
+            "AND (wh.isCompleted = true OR COALESCE(wh.timesWatched, 0) > 0)")
+    List<WatchHistory> findRecommendationSignals(@Param("status") Integer status);
+
+    @Query("SELECT wh FROM WatchHistory wh " +
+            "WHERE wh.status = :status " +
+            "AND wh.user IS NOT NULL " +
+            "AND wh.movie IS NOT NULL " +
+            "AND wh.movieItem IS NOT NULL " +
+            "AND wh.lastWatchSeconds IS NOT NULL " +
+            "AND wh.lastWatchSeconds > 0 " +
+            "AND (wh.isCompleted = false OR wh.isCompleted IS NULL)")
+    List<WatchHistory> findWatchProgressRecommendationSignals(@Param("status") Integer status);
+
     @Query("SELECT wh.movie FROM WatchHistory wh " +
             "WHERE wh.user.id = :userId " +
             "AND wh.movie IS NOT NULL " +

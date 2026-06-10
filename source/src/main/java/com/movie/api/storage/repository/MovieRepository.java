@@ -21,6 +21,14 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
 
     List<Movie> findAllByIdInAndStatus(List<Long> ids, Integer status);
 
+    @Query(value = "SELECT m.* " +
+            "FROM db_movie m " +
+            "WHERE m.status = :status " +
+            "ORDER BY m.is_featured DESC, m.view_count DESC, m.created_date DESC",
+            countQuery = "SELECT COUNT(*) FROM db_movie m WHERE m.status = :status",
+            nativeQuery = true)
+    Page<Movie> findActiveFallbackRecommendations(@Param("status") Integer status, Pageable pageable);
+
     List<Movie> findAllByImdbIdIsNotNull();
 
     boolean existsByCategories_Id(Long categoryId);
