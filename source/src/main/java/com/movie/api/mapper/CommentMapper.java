@@ -23,6 +23,7 @@ public interface CommentMapper {
     @Mapping(source = "totalDislike", target = "totalDislike")
     @Mapping(source = "totalChildren", target = "totalChildren")
     @Mapping(source = "isPinned", target = "isPinned")
+    @Mapping(source = "toxicSpans", target = "toxicSpans")
     @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountDto")
     @Mapping(source = "replyTo", target = "replyTo", qualifiedByName = "entityToAccountDto")
     @Mapping(source = "status", target = "status")
@@ -47,6 +48,7 @@ public interface CommentMapper {
     @Mapping(source = "parent.id", target = "parentId")
     @Mapping(source = "content", target = "content")
     @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountNotificationDto")
+    @Mapping(source = "toxicSpans", target = "toxicSpans")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToCommentNotificationDto")
     CommentNotificationDto entityToCommentNotificationDto(Comment comment);

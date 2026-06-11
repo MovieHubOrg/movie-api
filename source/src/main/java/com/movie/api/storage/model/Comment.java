@@ -48,4 +48,7 @@ public class Comment extends Auditable<String> {
 
     @Column(columnDefinition = "TEXT")
     private String replyToInfo;
+
+    @Column(name = "toxic_spans", columnDefinition = "TEXT")
+    private String toxicSpans;
 }

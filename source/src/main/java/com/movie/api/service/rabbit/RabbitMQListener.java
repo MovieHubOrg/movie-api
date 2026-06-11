@@ -12,6 +12,8 @@ import com.movie.api.form.video.DoneTranslateSubtitleForm;
 import com.movie.api.form.video.UpdateAudioForm;
 import com.movie.api.form.video.UpdateVideoForm;
 import com.movie.api.service.AccountSyncService;
+import com.movie.api.form.comment.DoneDetectorCommentForm;
+import com.movie.api.service.CommentService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.service.VideoService;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,9 @@ public class RabbitMQListener {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private CommentService commentService;
 
     @Value("${rabbitmq.account.queue.movie}")
     private String accountMovieQueue;
@@ -72,6 +77,11 @@ public class RabbitMQListener {
                     log.warn("==> Processing send notification");
                     SendNotificationForm sendNotificationForm = objectMapper.treeToValue(baseMessageForm.getData(), SendNotificationForm.class);
                     notificationService.sendNotification(sendNotificationForm);
+                    break;
+                case BaseConstant.CMD_DONE_DETECTOR_COMMENT:
+                    log.warn("==> Processing done detector comment");
+                    DoneDetectorCommentForm doneDetectorCommentForm = objectMapper.treeToValue(baseMessageForm.getData(), DoneDetectorCommentForm.class);
+                    commentService.handleDoneDetectorComment(doneDetectorCommentForm);
                     break;
             }
             log.warn("==> DONE processing message");

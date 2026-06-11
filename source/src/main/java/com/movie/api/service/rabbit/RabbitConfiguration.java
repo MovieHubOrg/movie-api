@@ -19,6 +19,9 @@ public class RabbitConfiguration {
     @Value("${rabbitmq.account.queue.movie}")
     private String accountMovieQueue;
 
+    @Value("${rabbitmq.toxic.comment.detector.queue}")
+    private String toxicCommentDetectorQueue;
+
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
         return new RabbitAdmin(connectionFactory);
@@ -27,6 +30,11 @@ public class RabbitConfiguration {
     @Bean
     public Queue updateVideoQueue() {
         return new Queue(updateVideoQueue, true);
+    }
+
+    @Bean
+    public Queue toxicCommentDetectorQueue() {
+        return new Queue(toxicCommentDetectorQueue, true);
     }
 
     @Bean

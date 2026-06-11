@@ -21,6 +21,7 @@ public class CommentDto extends ABasicAdminDto {
     private Integer totalDislike;
     private Integer totalChildren;
     private Boolean isPinned;
+    private String toxicSpans;
     private CommentDto parent;
     private AccountDto author;
     private AccountDto replyTo;

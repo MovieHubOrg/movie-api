@@ -68,6 +68,9 @@ public class BaseConstant {
     public static final String CMD_DELETE_SUBTITLE = "CMD_DELETE_SUBTITLE";
     public static final String CMD_UPDATE_SERVER_CONFIG = "CMD_UPDATE_SERVER_CONFIG";
     public static final String CMD_SEND_NOTIFICATION = "CMD_SEND_NOTIFICATION";
+    public static final String CMD_DETECTOR_COMMENT = "CMD_DETECTOR_COMMENT";
+    public static final String CMD_DONE_DETECTOR_COMMENT = "CMD_DONE_DETECTOR_COMMENT";
+    public static final String CMD_TOXIC_COMMENT_LOCKED = "CMD_TOXIC_COMMENT_LOCKED";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
     public static final String CMD_NEW_MOVIE_ITEM = "CMD_NEW_MOVIE_ITEM";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
@@ -84,7 +87,8 @@ public class BaseConstant {
             BaseConstant.CMD_NEW_MOVIE_ITEM,
             BaseConstant.CMD_REPLY_COMMENT,
             BaseConstant.CMD_VOTE_COMMENT,
-            BaseConstant.CMD_VOTE_REVIEW
+            BaseConstant.CMD_VOTE_REVIEW,
+            BaseConstant.CMD_TOXIC_COMMENT_LOCKED
     );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;

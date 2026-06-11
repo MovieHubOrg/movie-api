@@ -19,6 +19,7 @@ import com.movie.api.form.comment.UpdateCommentForm;
 import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.CommentMapper;
+import com.movie.api.service.CommentService;
 import com.movie.api.service.MovieService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.CommentCriteria;
@@ -74,6 +75,9 @@ public class CommentController extends ABasicController {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private CommentService commentService;
+
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CMT_C')")
@@ -117,6 +121,7 @@ public class CommentController extends ABasicController {
         }
 
         commentRepository.save(comment);
+        commentService.sendCommentToToxicDetector(comment);
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
         if (comment.getReplyTo() != null && !Objects.equals(author.getId(), comment.getReplyTo().getId())) {
             createReplyNotificationTemplate(comment, author, comment.getReplyTo(), movie);

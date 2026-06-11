@@ -18,4 +18,5 @@ public class CommentNotificationDto {
     private String parentId;
     private Integer reactionType;
     private AccountNotificationDto author;
+    private String toxicSpans;
 }
