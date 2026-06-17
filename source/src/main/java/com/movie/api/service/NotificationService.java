@@ -230,8 +230,7 @@ public class NotificationService {
             }
         } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_TOXIC_COMMENT_LOCKED)) {
             try {
-                CommentNotificationDto comment = objectMapper.readValue(sendNotificationForm.getBody(), CommentNotificationDto.class);
-                sendNotificationForm.setMessage(String.format("Bình luận của bạn đã bị khóa do chứa nội dung không phù hợp: %s", comment.getContent()));
+                sendNotificationForm.setMessage("Bình luận của bạn đã bị ẩn do chứa nội dung không phù hợp");
             } catch (Exception e) {
                 log.warn("Failed to parse toxic comment data for notification message: {}", e.getMessage());
             }

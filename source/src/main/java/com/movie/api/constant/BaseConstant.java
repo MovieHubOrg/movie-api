@@ -178,6 +178,10 @@ public class BaseConstant {
     public static final int MQTT_QOS_LEVEL_2 = 2; // Exactly once
 
     public static final String SETTING_KEY_LIVE_ROOM_EXTRA_ENDING_TIME = "live_room_extra_ending_time";
+    public static final String SETTING_KEY_DEV_MODE = "is_dev_mode";
+    public static final Set<String> SETTING_REDIS_CACHE_KEYS = Set.of(
+            SETTING_KEY_DEV_MODE
+    );
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");

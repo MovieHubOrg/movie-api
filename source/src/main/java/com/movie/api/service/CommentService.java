@@ -3,15 +3,18 @@ package com.movie.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.comment.CommentNotificationDto;
 import com.movie.api.exception.NotFoundException;
-import com.movie.api.form.comment.DoneDetectorCommentForm;
 import com.movie.api.form.comment.DetectorCommentForm;
+import com.movie.api.form.comment.DoneDetectorCommentForm;
 import com.movie.api.form.comment.ToxicSpanForm;
 import com.movie.api.mapper.CommentMapper;
 import com.movie.api.service.rabbit.RabbitService;
 import com.movie.api.storage.model.Comment;
+import com.movie.api.storage.model.Movie;
 import com.movie.api.storage.repository.CommentRepository;
+import com.movie.api.storage.repository.MovieRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +46,9 @@ public class CommentService {
 
     @Autowired
     private CommentMapper commentMapper;
+
+    @Autowired
+    private MovieRepository movieRepository;
 
     public void sendCommentToToxicDetector(Comment comment) {
         try {
@@ -79,13 +85,14 @@ public class CommentService {
     }
 
     private void sendToxicCommentNotification(Comment comment) {
-        if (comment.getAuthor() == null) {
-            log.warn("Skip toxic comment notification because comment {} has no author", comment.getId());
-            return;
-        }
+        Movie movie = movieRepository.findById(comment.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
 
         CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
-        String title = "Bình luận của bạn đã bị khóa do chứa nội dung không phù hợp";
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+
+        String title = "Bình luận của bạn đã bị ẩn do chứa nội dung không phù hợp";
         notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_TOXIC_COMMENT_LOCKED,
