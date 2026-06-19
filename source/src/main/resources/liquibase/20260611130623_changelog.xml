@@ -5,4 +5,9 @@
             <column name="toxic_spans" type="TEXT" afterColumn="reply_to_info"/>
         </addColumn>
     </changeSet>
+    <changeSet author="Movie" id="1781183207313-2">
+        <addColumn tableName="db_review">
+            <column name="toxic_spans" type="TEXT" afterColumn="total_dislike"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

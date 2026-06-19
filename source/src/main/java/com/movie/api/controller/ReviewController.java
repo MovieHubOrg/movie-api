@@ -12,15 +12,20 @@ import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.exception.UnauthorizationException;
 import com.movie.api.form.ChangeStatusForm;
+import com.movie.api.form.comment.UpdateToxicSpansForm;
 import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.form.review.CreateReviewForm;
 import com.movie.api.form.review.UpdateReviewForm;
 import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.ReviewMapper;
+import com.movie.api.service.CommentService;
 import com.movie.api.service.MovieService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.ReviewCriteria;
-import com.movie.api.storage.model.*;
+import com.movie.api.storage.model.Account;
+import com.movie.api.storage.model.Movie;
+import com.movie.api.storage.model.Reaction;
+import com.movie.api.storage.model.Review;
 import com.movie.api.storage.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +71,12 @@ public class ReviewController extends ABasicController {
     @Autowired
     private AccountMapper accountMapper;
 
+    @Autowired
+    private CommentService commentService;
+
+    @Autowired
+    private UserReportRepository userReportRepository;
+
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<ReviewDto> create(@Valid @RequestBody CreateReviewForm form) {
@@ -83,6 +94,8 @@ public class ReviewController extends ABasicController {
         review.setAuthor(user);
         review.setMovieId(movie.getId());
         reviewRepository.save(review);
+
+        commentService.sendCommentToToxicDetector(review.getId(), review.getContent(), BaseConstant.TOXIC_DETECT_TYPE_REVIEW);
 
         ReviewStatisticsDto statistics = movieService.calculateReview(movie.getId(), review.getRate(), BaseConstant.ACTION_ADD);
         movieService.applyReviewRatingPreference(user.getId(), movie.getId(), review.getRate());
@@ -236,6 +249,7 @@ public class ReviewController extends ABasicController {
         }
 
         reactionRepository.deleteByReviewId(review.getId());
+        userReportRepository.deleteByTypeAndObjectId(BaseConstant.USER_REPORT_TYPE_REVIEW, review.getId());
         reviewRepository.delete(review);
         movieService.deleteReviewRatingPreference(review.getAuthor().getId(), review.getMovieId());
 
@@ -257,6 +271,17 @@ public class ReviewController extends ABasicController {
         review.setStatus(form.getStatus());
         reviewRepository.save(review);
         return makeSuccessResponse("Change status success");
+    }
+
+    @Transactional
+    @PutMapping(value = "/update-toxic-spans", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('REV_U_T')")
+    public ApiMessageDto<Void> updateToxicSpans(@Valid @RequestBody UpdateToxicSpansForm form) {
+        Review review = reviewRepository.findById(form.getId())
+                .orElseThrow(() -> new NotFoundException("[Review] Not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));
+        review.setToxicSpans(form.getToxicSpans());
+        reviewRepository.save(review);
+        return makeSuccessResponse("Update toxic spans success");
     }
 
     @GetMapping(value = "/check/{movieId}", produces = MediaType.APPLICATION_JSON_VALUE)

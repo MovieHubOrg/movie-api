@@ -71,6 +71,7 @@ public class BaseConstant {
     public static final String CMD_DETECTOR_COMMENT = "CMD_DETECTOR_COMMENT";
     public static final String CMD_DONE_DETECTOR_COMMENT = "CMD_DONE_DETECTOR_COMMENT";
     public static final String CMD_TOXIC_COMMENT_LOCKED = "CMD_TOXIC_COMMENT_LOCKED";
+    public static final String CMD_TOXIC_REVIEW_LOCKED = "CMD_TOXIC_REVIEW_LOCKED";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
     public static final String CMD_NEW_MOVIE_ITEM = "CMD_NEW_MOVIE_ITEM";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
@@ -81,6 +82,7 @@ public class BaseConstant {
     public static final String CMD_UPDATE_PARTICIPANT_COUNT = "CMD_UPDATE_PARTICIPANT_COUNT";
     public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
     public static final String CMD_CLIENT_PING = "CMD_CLIENT_PING";
+    public static final String CMD_NEW_USER_REPORT = "CMD_NEW_USER_REPORT";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
@@ -88,7 +90,8 @@ public class BaseConstant {
             BaseConstant.CMD_REPLY_COMMENT,
             BaseConstant.CMD_VOTE_COMMENT,
             BaseConstant.CMD_VOTE_REVIEW,
-            BaseConstant.CMD_TOXIC_COMMENT_LOCKED
+            BaseConstant.CMD_TOXIC_COMMENT_LOCKED,
+            BaseConstant.CMD_TOXIC_REVIEW_LOCKED
     );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;
@@ -178,6 +181,17 @@ public class BaseConstant {
     public static final int MQTT_QOS_LEVEL_2 = 2; // Exactly once
 
     public static final String SETTING_KEY_LIVE_ROOM_EXTRA_ENDING_TIME = "live_room_extra_ending_time";
+    public static final String SETTING_KEY_DEV_MODE = "is_dev_mode";
+    public static final Set<String> SETTING_REDIS_CACHE_KEYS = Set.of(
+            SETTING_KEY_DEV_MODE
+    );
+
+    public static final Integer TOXIC_DETECT_TYPE_COMMENT = 1;
+    public static final Integer TOXIC_DETECT_TYPE_REVIEW = 2;
+
+    // User report types
+    public static final Integer USER_REPORT_TYPE_COMMENT = 1;
+    public static final Integer USER_REPORT_TYPE_REVIEW = 2;
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");

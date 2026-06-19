@@ -22,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 @Component
 @Slf4j
 public class RabbitMQListener {
@@ -81,7 +83,15 @@ public class RabbitMQListener {
                 case BaseConstant.CMD_DONE_DETECTOR_COMMENT:
                     log.warn("==> Processing done detector comment");
                     DoneDetectorCommentForm doneDetectorCommentForm = objectMapper.treeToValue(baseMessageForm.getData(), DoneDetectorCommentForm.class);
-                    commentService.handleDoneDetectorComment(doneDetectorCommentForm);
+                    Integer type = doneDetectorCommentForm != null ? doneDetectorCommentForm.getType() : null;
+
+                    if (Objects.equals(type, BaseConstant.TOXIC_DETECT_TYPE_COMMENT)) {
+                        commentService.handleDoneDetectorComment(doneDetectorCommentForm);
+                    } else if (Objects.equals(type, BaseConstant.TOXIC_DETECT_TYPE_REVIEW)) {
+                        commentService.handleDoneDetectorReview(doneDetectorCommentForm);
+                    } else {
+                        log.warn("Unknown detector type {} for done detector comment", type);
+                    }
                     break;
             }
             log.warn("==> DONE processing message");

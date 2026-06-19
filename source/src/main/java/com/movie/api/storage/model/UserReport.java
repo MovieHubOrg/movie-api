@@ -9,26 +9,19 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 
 @Entity
-@Table(name = DatabaseConstant.PREFIX_TABLE + "review")
+@Table(name = DatabaseConstant.PREFIX_TABLE + "user_report")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
-public class Review extends Auditable<String> {
+public class UserReport extends Auditable<String> {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private Account author;
+    private Account user;
 
-    private Long movieId;
+    private Long objectId;
 
-    private Integer rate;
+    private Integer type; // 1: comment, 2: review
 
-    @Column(columnDefinition = "longtext")
+    @Column(columnDefinition = "TEXT")
     private String content;
-
-    private Integer totalLike = 0;
-
-    private Integer totalDislike = 0;
-
-    @Column(name = "toxic_spans", columnDefinition = "TEXT")
-    private String toxicSpans;
 }

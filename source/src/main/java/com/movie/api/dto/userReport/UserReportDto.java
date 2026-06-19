@@ -1,24 +1,23 @@
-package com.movie.api.dto.review;
+package com.movie.api.dto.userReport;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.movie.api.dto.ABasicAdminDto;
 import com.movie.api.dto.LongToStringIfWebSerializer;
 import com.movie.api.dto.account.AccountDto;
-import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-@ApiModel
-public class ReviewDto extends ABasicAdminDto {
-    private AccountDto author;
+public class UserReportDto extends ABasicAdminDto {
+    private AccountDto user;
+
     @JsonSerialize(using = LongToStringIfWebSerializer.class)
-    private Long movieId;
-    private Integer rate;
+    @ApiModelProperty(name = "objectId")
+    private Long objectId;
+
+    private Integer type;
+
     private String content;
-    private Integer totalLike;
-    private Integer totalDislike;
-    private String toxicSpans;
-    private ReviewStatisticsDto statistics;
 }

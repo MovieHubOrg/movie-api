@@ -3,15 +3,22 @@ package com.movie.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movie.api.constant.BaseConstant;
+import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.comment.CommentNotificationDto;
+import com.movie.api.dto.review.ReviewNotificationDto;
 import com.movie.api.exception.NotFoundException;
-import com.movie.api.form.comment.DoneDetectorCommentForm;
 import com.movie.api.form.comment.DetectorCommentForm;
+import com.movie.api.form.comment.DoneDetectorCommentForm;
 import com.movie.api.form.comment.ToxicSpanForm;
 import com.movie.api.mapper.CommentMapper;
+import com.movie.api.mapper.ReviewMapper;
 import com.movie.api.service.rabbit.RabbitService;
 import com.movie.api.storage.model.Comment;
+import com.movie.api.storage.model.Movie;
+import com.movie.api.storage.model.Review;
 import com.movie.api.storage.repository.CommentRepository;
+import com.movie.api.storage.repository.MovieRepository;
+import com.movie.api.storage.repository.ReviewRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,12 +51,22 @@ public class CommentService {
     @Autowired
     private CommentMapper commentMapper;
 
-    public void sendCommentToToxicDetector(Comment comment) {
+    @Autowired
+    private MovieRepository movieRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private ReviewMapper reviewMapper;
+
+    public void sendCommentToToxicDetector(Long objectId, String content, Integer type) {
         try {
-            log.info("==> Sending comment to toxic detector: {}", comment.getId());
+            log.info("==> Sending comment to toxic detector: {} type : {}", objectId, type);
             DetectorCommentForm form = new DetectorCommentForm();
-            form.setCommentId(comment.getId());
-            form.setContent(comment.getContent());
+            form.setCommentId(objectId);
+            form.setContent(content);
+            form.setType(type);
             rabbitService.handleSendMsg(appName, toxicCommentDetectorQueue, form, BaseConstant.CMD_DETECTOR_COMMENT);
         } catch (Exception e) {
             log.error("Failed to send comment to toxic detector: {}", e.getMessage());
@@ -78,14 +95,52 @@ public class CommentService {
         sendToxicCommentNotification(comment);
     }
 
-    private void sendToxicCommentNotification(Comment comment) {
-        if (comment.getAuthor() == null) {
-            log.warn("Skip toxic comment notification because comment {} has no author", comment.getId());
+    @Transactional
+    public void handleDoneDetectorReview(DoneDetectorCommentForm form) throws JsonProcessingException {
+        if (form == null || form.getCommentId() == null) {
+            log.warn("Skip done detector review because payload is invalid");
             return;
         }
 
+        List<ToxicSpanForm> toxicSpans = form.getToxicSpans();
+        if (toxicSpans == null || toxicSpans.isEmpty()) {
+            log.info("Review {} has no toxic spans", form.getCommentId());
+            return;
+        }
+
+        Review review = reviewRepository.findById(form.getCommentId())
+                .orElseThrow(() -> new NotFoundException("[Review] not found"));
+        review.setStatus(BaseConstant.STATUS_LOCK);
+        review.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
+        reviewRepository.save(review);
+
+        // send notification to review author
+        ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
+        Movie movie = movieRepository.findById(review.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+
+        String title = "Đánh giá của bạn đã bị ẩn do chứa nội dung không phù hợp";
+        notificationService.sendNotificationMessage(
+                title,
+                BaseConstant.CMD_TOXIC_REVIEW_LOCKED,
+                data,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                String.valueOf(review.getAuthor().getId())
+        );
+    }
+
+    private void sendToxicCommentNotification(Comment comment) {
+        Movie movie = movieRepository.findById(comment.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+
         CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
-        String title = "Bình luận của bạn đã bị khóa do chứa nội dung không phù hợp";
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+
+        String title = "Bình luận của bạn đã bị ẩn do chứa nội dung không phù hợp";
         notificationService.sendNotificationMessage(
                 title,
                 BaseConstant.CMD_TOXIC_COMMENT_LOCKED,

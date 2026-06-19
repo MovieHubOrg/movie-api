@@ -7,6 +7,7 @@ import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.setting.SettingDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
+import com.movie.api.exception.UnauthorizationException;
 import com.movie.api.form.setting.CreateSettingForm;
 import com.movie.api.form.setting.FindByGroupNameForm;
 import com.movie.api.form.setting.FindByKeyNameForm;
@@ -17,7 +18,9 @@ import com.movie.api.storage.criteria.SettingCriteria;
 import com.movie.api.storage.model.Setting;
 import com.movie.api.storage.repository.SettingRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,11 +45,14 @@ public class SettingController extends ABasicController {
     @Autowired
     private SettingCacheService settingCacheService;
 
+    @Value("${server.internal.password}")
+    private String serverInternalPassword;
+
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SET_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateSettingForm form) {
         if (settingRepository.findByKeyName(form.getKeyName()).isPresent()) {
-            throw new BadRequestException(ErrorCode.SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME, "Key name existed");
+            throw new BadRequestException("Key name existed", ErrorCode.SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME);
         }
 
         Setting setting = settingMapper.fromCreateSettingFormToEntity(form);
@@ -88,21 +94,21 @@ public class SettingController extends ABasicController {
     @PreAuthorize("hasRole('SET_U')")
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateSettingForm form) {
         Setting setting = settingRepository.findById(form.getId())
-                .orElseThrow(() -> new BadRequestException(ErrorCode.SETTING_ERROR_NOT_FOUND, "Not found setting"));
+                .orElseThrow(() -> new NotFoundException("Not found setting", ErrorCode.SETTING_ERROR_NOT_FOUND));
         String oldKeyName = setting.getKeyName();
 
         boolean isKeyNameChanged = !form.getKeyName().equals(setting.getKeyName());
         if (isKeyNameChanged && settingRepository.findByKeyName(form.getKeyName()).isPresent()) {
-            throw new BadRequestException(ErrorCode.SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME, "Key name existed");
+            throw new BadRequestException("Key name existed", ErrorCode.SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME);
         }
 
         settingMapper.fromUpdateSettingFormToEntity(form, setting);
         settingRepository.save(setting);
 
-        if (!oldKeyName.equals(setting.getKeyName())) {
+//        if (!oldKeyName.equals(setting.getKeyName())) {
             settingCacheService.remove(oldKeyName);
-        }
-        settingCacheService.put(setting);
+//        }
+//        settingCacheService.put(setting);
         return makeSuccessResponse("Update setting success");
     }
 
@@ -136,5 +142,16 @@ public class SettingController extends ABasicController {
     public ApiMessageDto<List<SettingDto>> listSetting() {
         List<Setting> settings = settingRepository.findAllByIsSystem(false);
         return makeSuccessResponse(settingMapper.fromEntityToSettingDtoPublicList(settings), "Get list setting success");
+    }
+
+    @GetMapping(value = "/internal/find-by-key/{keyName}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<SettingDto> findByKey(@PathVariable String keyName,
+                                               @RequestHeader(value = BaseConstant.HEADER_X_API_KEY) String apiKey) {
+        if (StringUtils.isBlank(apiKey) || !apiKey.equals(serverInternalPassword)) {
+            throw new UnauthorizationException("[ServerConfig] Unauthorized", ErrorCode.SERVER_CONFIG_ERROR_UNAUTHORIZED);
+        }
+        Setting setting = settingRepository.findByKeyName(keyName)
+                .orElseThrow(() -> new NotFoundException("Not found setting", ErrorCode.SETTING_ERROR_NOT_FOUND));
+        return makeSuccessResponse(settingMapper.fromEntityToSettingAdminDto(setting), "Get setting success");
     }
 }

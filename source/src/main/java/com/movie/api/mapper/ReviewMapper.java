@@ -21,6 +21,7 @@ public interface ReviewMapper {
     @Mapping(source = "content", target = "content")
     @Mapping(source = "totalLike", target = "totalLike")
     @Mapping(source = "totalDislike", target = "totalDislike")
+    @Mapping(source = "toxicSpans", target = "toxicSpans")
     @Mapping(source = "status", target = "status")
     @Mapping(source = "modifiedDate", target = "modifiedDate")
     @Mapping(source = "createdDate", target = "createdDate")
@@ -36,6 +37,7 @@ public interface ReviewMapper {
     @Mapping(source = "rate", target = "rate")
     @Mapping(source = "content", target = "content")
     @Mapping(source = "author", target = "author", qualifiedByName = "entityToAccountNotificationDto")
+    @Mapping(source = "toxicSpans", target = "toxicSpans")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToReviewNotificationDto")
     ReviewNotificationDto entityToReviewNotificationDto(Review review);
