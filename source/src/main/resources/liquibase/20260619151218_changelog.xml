@@ -1,0 +1,37 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="Movie" id="1781881959800-1">
+        <createTable tableName="db_user_report">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="db_user_reportPK"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="object_id" type="BIGINT"/>
+            <column name="type" type="INT"/>
+            <column name="content" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Movie" id="1781881959800-2">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="db_user_report"
+                                 constraintName="FK36et6bpgnkf8weye4226gmdib" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="db_account"
+                                 validate="true"/>
+    </changeSet>
+</databaseChangeLog>

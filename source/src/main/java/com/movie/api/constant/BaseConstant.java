@@ -82,6 +82,7 @@ public class BaseConstant {
     public static final String CMD_UPDATE_PARTICIPANT_COUNT = "CMD_UPDATE_PARTICIPANT_COUNT";
     public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
     public static final String CMD_CLIENT_PING = "CMD_CLIENT_PING";
+    public static final String CMD_NEW_USER_REPORT = "CMD_NEW_USER_REPORT";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
@@ -187,6 +188,10 @@ public class BaseConstant {
 
     public static final Integer TOXIC_DETECT_TYPE_COMMENT = 1;
     public static final Integer TOXIC_DETECT_TYPE_REVIEW = 2;
+
+    // User report types
+    public static final Integer USER_REPORT_TYPE_COMMENT = 1;
+    public static final Integer USER_REPORT_TYPE_REVIEW = 2;
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");

@@ -22,7 +22,10 @@ import com.movie.api.service.CommentService;
 import com.movie.api.service.MovieService;
 import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.ReviewCriteria;
-import com.movie.api.storage.model.*;
+import com.movie.api.storage.model.Account;
+import com.movie.api.storage.model.Movie;
+import com.movie.api.storage.model.Reaction;
+import com.movie.api.storage.model.Review;
 import com.movie.api.storage.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +73,9 @@ public class ReviewController extends ABasicController {
 
     @Autowired
     private CommentService commentService;
+
+    @Autowired
+    private UserReportRepository userReportRepository;
 
     @Transactional
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -243,6 +249,7 @@ public class ReviewController extends ABasicController {
         }
 
         reactionRepository.deleteByReviewId(review.getId());
+        userReportRepository.deleteByTypeAndObjectId(BaseConstant.USER_REPORT_TYPE_REVIEW, review.getId());
         reviewRepository.delete(review);
         movieService.deleteReviewRatingPreference(review.getAuthor().getId(), review.getMovieId());
 

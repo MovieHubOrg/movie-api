@@ -203,4 +203,10 @@ public class ErrorCode {
      */
     public static final String SETTING_ERROR_NOT_FOUND = "ERROR-SETTING-0000";
     public static final String SETTING_ERROR_EXISTED_GROUP_NAME_AND_KEY_NAME = "ERROR-SETTING-0001";
+
+    /**
+     * User Report error code
+     */
+    public static final String USER_REPORT_ERROR_NOT_FOUND = "ERROR-USER-REPORT-0000";
+    public static final String USER_REPORT_ERROR_EXISTED = "ERROR-USER-REPORT-0001";
 }

@@ -16,8 +16,8 @@ import com.movie.api.form.ChangeStatusForm;
 import com.movie.api.form.comment.CreateCommentForm;
 import com.movie.api.form.comment.PinnedCommentForm;
 import com.movie.api.form.comment.UpdateCommentForm;
-import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.form.comment.UpdateToxicSpansForm;
+import com.movie.api.form.reaction.CreateReactionForm;
 import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.CommentMapper;
 import com.movie.api.service.CommentService;
@@ -60,6 +60,9 @@ public class CommentController extends ABasicController {
 
     @Autowired
     private ReactionRepository reactionRepository;
+
+    @Autowired
+    private UserReportRepository userReportRepository;
 
     @Autowired
     private AccountMapper accountMapper;
@@ -304,6 +307,7 @@ public class CommentController extends ABasicController {
         }
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_DELETE);
         reactionRepository.deleteByCommentId(comment.getId());
+        userReportRepository.deleteByTypeAndObjectId(BaseConstant.USER_REPORT_TYPE_COMMENT, comment.getId());
         commentRepository.delete(comment);
         return makeSuccessResponse("Delete comment success");
     }
