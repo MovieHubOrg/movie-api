@@ -28,4 +28,7 @@ public class Review extends Auditable<String> {
     private Integer totalLike = 0;
 
     private Integer totalDislike = 0;
+
+    @Column(name = "toxic_spans", columnDefinition = "TEXT")
+    private String toxicSpans;
 }

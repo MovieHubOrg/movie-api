@@ -12,4 +12,10 @@ public class DetectorCommentForm {
     @JsonProperty("comment_id")
     private Long commentId;
     private String content;
+
+    /**
+     * 1 = comment, 2 = review
+     */
+    @JsonProperty("type")
+    private Integer type;
 }

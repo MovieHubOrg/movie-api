@@ -17,4 +17,5 @@ public class ReviewNotificationDto {
     private String content;
     private Integer reactionType;
     private AccountNotificationDto author;
+    private String toxicSpans;
 }

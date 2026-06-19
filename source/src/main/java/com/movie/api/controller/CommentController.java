@@ -17,6 +17,7 @@ import com.movie.api.form.comment.CreateCommentForm;
 import com.movie.api.form.comment.PinnedCommentForm;
 import com.movie.api.form.comment.UpdateCommentForm;
 import com.movie.api.form.reaction.CreateReactionForm;
+import com.movie.api.form.comment.UpdateToxicSpansForm;
 import com.movie.api.mapper.AccountMapper;
 import com.movie.api.mapper.CommentMapper;
 import com.movie.api.service.CommentService;
@@ -121,7 +122,7 @@ public class CommentController extends ABasicController {
         }
 
         commentRepository.save(comment);
-        commentService.sendCommentToToxicDetector(comment);
+        commentService.sendCommentToToxicDetector(comment.getId(), comment.getContent(), BaseConstant.TOXIC_DETECT_TYPE_COMMENT);
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
         if (comment.getReplyTo() != null && !Objects.equals(author.getId(), comment.getReplyTo().getId())) {
             createReplyNotificationTemplate(comment, author, comment.getReplyTo(), movie);
@@ -319,5 +320,16 @@ public class CommentController extends ABasicController {
         comment.setStatus(form.getStatus());
         commentRepository.save(comment);
         return makeSuccessResponse("Change status success");
+    }
+
+    @Transactional
+    @PutMapping(value = "/update-toxic-spans", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('CMT_U_T')")
+    public ApiMessageDto<Void> updateToxicSpans(@Valid @RequestBody UpdateToxicSpansForm form) {
+        Comment comment = commentRepository.findById(form.getId())
+                .orElseThrow(() -> new NotFoundException("[Comment] Not found", ErrorCode.COMMENT_ERROR_NOT_FOUND));
+        comment.setToxicSpans(form.getToxicSpans());
+        commentRepository.save(comment);
+        return makeSuccessResponse("Update toxic spans success");
     }
 }

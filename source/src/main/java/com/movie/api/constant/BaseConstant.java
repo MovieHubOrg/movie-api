@@ -71,6 +71,7 @@ public class BaseConstant {
     public static final String CMD_DETECTOR_COMMENT = "CMD_DETECTOR_COMMENT";
     public static final String CMD_DONE_DETECTOR_COMMENT = "CMD_DONE_DETECTOR_COMMENT";
     public static final String CMD_TOXIC_COMMENT_LOCKED = "CMD_TOXIC_COMMENT_LOCKED";
+    public static final String CMD_TOXIC_REVIEW_LOCKED = "CMD_TOXIC_REVIEW_LOCKED";
     public static final String CMD_NEW_MOVIE = "CMD_NEW_MOVIE";
     public static final String CMD_NEW_MOVIE_ITEM = "CMD_NEW_MOVIE_ITEM";
     public static final String CMD_REPLY_COMMENT = "CMD_REPLY_COMMENT";
@@ -88,7 +89,8 @@ public class BaseConstant {
             BaseConstant.CMD_REPLY_COMMENT,
             BaseConstant.CMD_VOTE_COMMENT,
             BaseConstant.CMD_VOTE_REVIEW,
-            BaseConstant.CMD_TOXIC_COMMENT_LOCKED
+            BaseConstant.CMD_TOXIC_COMMENT_LOCKED,
+            BaseConstant.CMD_TOXIC_REVIEW_LOCKED
     );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;
@@ -182,6 +184,9 @@ public class BaseConstant {
     public static final Set<String> SETTING_REDIS_CACHE_KEYS = Set.of(
             SETTING_KEY_DEV_MODE
     );
+
+    public static final Integer TOXIC_DETECT_TYPE_COMMENT = 1;
+    public static final Integer TOXIC_DETECT_TYPE_REVIEW = 2;
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");

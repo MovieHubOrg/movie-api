@@ -234,6 +234,12 @@ public class NotificationService {
             } catch (Exception e) {
                 log.warn("Failed to parse toxic comment data for notification message: {}", e.getMessage());
             }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_TOXIC_REVIEW_LOCKED)) {
+            try {
+                sendNotificationForm.setMessage("Đánh giá của bạn đã bị ẩn do chứa nội dung không phù hợp");
+            } catch (Exception e) {
+                log.warn("Failed to parse toxic review data for notification message: {}", e.getMessage());
+            }
         }
     }
 

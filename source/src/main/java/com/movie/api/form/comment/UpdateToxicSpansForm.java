@@ -5,17 +5,13 @@ import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @ApiModel
-public class DoneDetectorCommentForm {
-    @JsonProperty("comment_id")
-    private Long commentId;
+public class UpdateToxicSpansForm {
+    @JsonProperty("id")
+    private Long id;
 
     @JsonProperty("toxic_spans")
-    private List<ToxicSpanForm> toxicSpans;
-
-    private Integer type;
+    private String toxicSpans;
 }
