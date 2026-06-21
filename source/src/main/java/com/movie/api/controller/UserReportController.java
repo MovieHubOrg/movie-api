@@ -5,6 +5,7 @@ import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.userReport.UserReportDto;
+import com.movie.api.dto.userReport.UserReportMetadataDto;
 import com.movie.api.dto.userReport.UserReportNotificationDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
@@ -12,14 +13,8 @@ import com.movie.api.form.CreateUserReportForm;
 import com.movie.api.mapper.UserReportMapper;
 import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.UserReportCriteria;
-import com.movie.api.storage.model.Account;
-import com.movie.api.storage.model.Comment;
-import com.movie.api.storage.model.Review;
-import com.movie.api.storage.model.UserReport;
-import com.movie.api.storage.repository.AccountRepository;
-import com.movie.api.storage.repository.CommentRepository;
-import com.movie.api.storage.repository.ReviewRepository;
-import com.movie.api.storage.repository.UserReportRepository;
+import com.movie.api.storage.model.*;
+import com.movie.api.storage.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -57,12 +52,16 @@ public class UserReportController extends ABasicController {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private MovieRepository movieRepository;
+
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('URP_C')")
     public ApiMessageDto<Void> create(@Valid @RequestBody CreateUserReportForm form) {
         Account user = accountRepository.findByIdAndStatusAndKind(getCurrentUser(), BaseConstant.STATUS_ACTIVE, BaseConstant.ACCOUNT_KIND_USER)
                 .orElseThrow(() -> new NotFoundException("[Account] not found", ErrorCode.ACCOUNT_ERROR_NOT_FOUND));
         String title = null;
+        UserReportMetadataDto metadata = new UserReportMetadataDto();
         // Validate object existence and author kind for comment type
         if (Objects.equals(form.getType(), BaseConstant.USER_REPORT_TYPE_COMMENT)) {
             Comment comment = commentRepository.findById(form.getObjectId())
@@ -75,6 +74,19 @@ public class UserReportController extends ABasicController {
                 throw new BadRequestException("Only user comments can be reported");
             }
             title = String.format("%s đã báo cáo bình luận của %s", user.getFullName(), author.getFullName());
+
+            Movie movie;
+            if (comment.getMovieItem() != null) {
+                movie = comment.getMovieItem().getMovie();
+            } else {
+                movie = movieRepository.findById(comment.getMovieId())
+                        .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+            }
+            metadata.setParentId(comment.getParent().getId().toString());
+            metadata.setMovieItemId(comment.getMovieItem().getId().toString());
+            metadata.setMovieId(movie.getId().toString());
+            metadata.setMovieTitle(movie.getTitle());
+            metadata.setMovieThumbnail(movie.getThumbnailUrl());
         } else if (Objects.equals(form.getType(), BaseConstant.USER_REPORT_TYPE_REVIEW)) {
             Review review = reviewRepository.findById(form.getObjectId())
                     .orElseThrow(() -> new NotFoundException("[Review] not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));
@@ -83,6 +95,12 @@ public class UserReportController extends ABasicController {
                 throw new BadRequestException("You cannot report your own review");
             }
             title = String.format("%s đã báo cáo đánh giá của %s", user.getFullName(), author.getFullName());
+
+            Movie movie = movieRepository.findById(review.getMovieId())
+                    .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+            metadata.setMovieId(movie.getId().toString());
+            metadata.setMovieTitle(movie.getTitle());
+            metadata.setMovieThumbnail(movie.getThumbnailUrl());
         }
 
         if (userReportRepository.existsByUserIdAndObjectIdAndType(user.getId(), form.getObjectId(), form.getType())) {
@@ -94,7 +112,7 @@ public class UserReportController extends ABasicController {
         userReportRepository.save(report);
 
         if (title != null) {
-            sendNotificationForUserReport(report, title, BaseConstant.CMD_NEW_USER_REPORT);
+            sendNotificationForUserReport(report, title, BaseConstant.CMD_NEW_USER_REPORT, metadata);
         }
 
         return makeSuccessResponse("Report success");
@@ -125,8 +143,9 @@ public class UserReportController extends ABasicController {
         return makeSuccessResponse("Delete user report success");
     }
 
-    private void sendNotificationForUserReport(UserReport userReport, String title, String cmd) {
+    private void sendNotificationForUserReport(UserReport userReport, String title, String cmd, UserReportMetadataDto metadata) {
         UserReportNotificationDto data = userReportMapper.entityToNotificationDto(userReport);
-        notificationService.sendNotificationMessage(title, cmd, data, BaseConstant.NOTIFICATION_TYPE_CMS, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
+        userReportMapper.updateFromMetaDataToUserReportNotificationDto(metadata, data);
+        notificationService.sendNotificationMessage(title, cmd, data, BaseConstant.NOTIFICATION_TYPE_COMMUNITY, BaseConstant.NOTIFICATION_TARGET_TYPE_APP, BaseConstant.APP_CMS);
     }
 }

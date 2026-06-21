@@ -2,6 +2,7 @@ package com.movie.api.storage.criteria;
 
 import com.movie.api.storage.model.Comment;
 import lombok.Data;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import javax.persistence.criteria.CriteriaBuilder;
@@ -22,6 +23,10 @@ public class CommentCriteria {
     private Boolean isPinned;
     private Integer status;
     private Boolean isParent;
+    // sorting flags
+    private Boolean newest;
+    private Boolean topLiked;
+    private Boolean topDisliked;
 
     public Specification<Comment> getSpecification() {
         return new Specification<Comment>() {
@@ -64,5 +69,33 @@ public class CommentCriteria {
                 return cb.and(predicates.toArray(new Predicate[0]));
             }
         };
+    }
+
+    /**
+     * isPinned luôn ưu tiên đứng đầu (desc).
+     * Sau đó tới tiêu chí phụ theo flag, mặc định là createdDate.
+     * Direction của createdDate phụ thuộc parentId:
+     *   - root comment (parentId == null) -> mới nhất trước
+     *   - reply (parentId != null) -> cũ nhất trước (đúng thứ tự hội thoại)
+     */
+    public Sort getSort() {
+        Sort.Direction dateDirection = (getParentId() == null) ? Sort.Direction.DESC : Sort.Direction.ASC;
+
+        Sort.Order secondaryOrder;
+        if (Boolean.TRUE.equals(getTopLiked())) {
+            secondaryOrder = Sort.Order.desc("totalLike");
+        } else if (Boolean.TRUE.equals(getTopDisliked())) {
+            secondaryOrder = Sort.Order.desc("totalDislike");
+        } else {
+            // mặc định, và cũng là trường hợp newest=true
+            secondaryOrder = new Sort.Order(dateDirection, "createdDate");
+        }
+
+        // nếu sort theo totalLike/totalDislike, vẫn nên có createdDate làm tie-breaker
+        if (!"createdDate".equals(secondaryOrder.getProperty())) {
+            return Sort.by(Sort.Order.desc("isPinned"), secondaryOrder, new Sort.Order(dateDirection, "createdDate"));
+        }
+
+        return Sort.by(Sort.Order.desc("isPinned"), secondaryOrder);
     }
 }

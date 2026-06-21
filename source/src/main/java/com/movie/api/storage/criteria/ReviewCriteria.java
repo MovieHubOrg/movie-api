@@ -2,6 +2,7 @@ package com.movie.api.storage.criteria;
 
 import com.movie.api.storage.model.Review;
 import lombok.Data;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import javax.persistence.criteria.CriteriaBuilder;
@@ -19,6 +20,9 @@ public class ReviewCriteria {
     private Long authorId;
     private Integer rate;
     private Integer status;
+    private Boolean newest;
+    private Boolean topLiked;
+    private Boolean topDisliked;
 
     public Specification<Review> getSpecification() {
         return new Specification<Review>() {
@@ -49,5 +53,19 @@ public class ReviewCriteria {
                 return cb.and(predicates.toArray(new Predicate[predicates.size()]));
             }
         };
+    }
+
+    public Sort getSort() {
+        if (Boolean.TRUE.equals(newest)) {
+            return Sort.by(Sort.Order.desc("createdDate"));
+        }
+        if (Boolean.TRUE.equals(topLiked)) {
+            return Sort.by(Sort.Order.desc("totalLike"), Sort.Order.desc("createdDate"));
+        }
+        if (Boolean.TRUE.equals(topDisliked)) {
+            return Sort.by(Sort.Order.desc("totalDislike"), Sort.Order.desc("createdDate"));
+        }
+        // default
+        return Sort.by(Sort.Order.desc("rate"), Sort.Order.desc("createdDate"));
     }
 }

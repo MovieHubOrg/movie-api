@@ -1,9 +1,12 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.userReport.UserReportDto;
+import com.movie.api.dto.userReport.UserReportMetadataDto;
 import com.movie.api.dto.userReport.UserReportNotificationDto;
 import com.movie.api.form.CreateUserReportForm;
+import com.movie.api.form.video.UpdateVideoLibraryForm;
 import com.movie.api.storage.model.UserReport;
+import com.movie.api.storage.model.VideoLibrary;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -40,4 +43,12 @@ public interface UserReportMapper {
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToNotificationDto")
     UserReportNotificationDto entityToNotificationDto(UserReport userReport);
+
+    @Mapping(source = "movieItemId", target = "movieItemId")
+    @Mapping(source = "movieId", target = "movieId")
+    @Mapping(source = "movieTitle", target = "movieTitle")
+    @Mapping(source = "movieThumbnail", target = "movieThumbnail")
+    @Mapping(source = "parentId", target = "parentId")
+    @BeanMapping(ignoreByDefault = true)
+    void updateFromMetaDataToUserReportNotificationDto(UserReportMetadataDto metadata, @MappingTarget UserReportNotificationDto data);
 }

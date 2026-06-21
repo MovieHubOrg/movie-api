@@ -114,9 +114,7 @@ public class ReviewController extends ABasicController {
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<ResponseListDto<List<ReviewDto>>> list(ReviewCriteria criteria, Pageable pageable) {
-        pageable = PageRequest.of(pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Order.desc("rate"), Sort.Order.desc("createdDate")));
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), criteria.getSort());
 
 //        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
         Page<Review> reviews = reviewRepository.findAll(criteria.getSpecification(), pageable);
@@ -126,9 +124,7 @@ public class ReviewController extends ABasicController {
     @GetMapping(value = "/admin/list", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('REV_L')")
     public ApiMessageDto<ResponseListDto<List<ReviewDto>>> listAdmin(ReviewCriteria criteria, Pageable pageable) {
-        pageable = PageRequest.of(pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Order.desc("rate"), Sort.Order.desc("createdDate")));
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), criteria.getSort());
 
         Page<Review> reviews = reviewRepository.findAll(criteria.getSpecification(), pageable);
         return makeSuccessResponse(makeResponseListDto(reviews, reviewMapper::fromEntityToReviewDtoList), "Get list review success");
