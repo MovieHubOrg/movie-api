@@ -82,11 +82,19 @@ public class UserReportController extends ABasicController {
                 movie = movieRepository.findById(comment.getMovieId())
                         .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
             }
-            metadata.setParentId(comment.getParent().getId().toString());
-            metadata.setMovieItemId(comment.getMovieItem().getId().toString());
-            metadata.setMovieId(movie.getId().toString());
-            metadata.setMovieTitle(movie.getTitle());
-            metadata.setMovieThumbnail(movie.getThumbnailUrl());
+            if (comment.getParent() != null && comment.getParent().getId() != null) {
+                metadata.setParentId(comment.getParent().getId().toString());
+            }
+            if (comment.getMovieItem() != null && comment.getMovieItem().getId() != null) {
+                metadata.setMovieItemId(comment.getMovieItem().getId().toString());
+            }
+            if (movie != null && movie.getId() != null) {
+                metadata.setMovieId(movie.getId().toString());
+            }
+            if (movie != null) {
+                metadata.setMovieTitle(movie.getTitle());
+                metadata.setMovieThumbnail(movie.getThumbnailUrl());
+            }
         } else if (Objects.equals(form.getType(), BaseConstant.USER_REPORT_TYPE_REVIEW)) {
             Review review = reviewRepository.findById(form.getObjectId())
                     .orElseThrow(() -> new NotFoundException("[Review] not found", ErrorCode.REVIEW_ERROR_NOT_FOUND));
