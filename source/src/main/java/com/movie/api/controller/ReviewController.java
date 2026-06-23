@@ -264,8 +264,17 @@ public class ReviewController extends ABasicController {
     public ApiMessageDto<Void> changeStatus(@Valid @RequestBody ChangeStatusForm form) {
         Review review = reviewRepository.findById(form.getId())
                 .orElseThrow(() -> new NotFoundException("[Review] Not found", ErrorCode.COMMENT_ERROR_NOT_FOUND));
+        Integer oldStatus = review.getStatus();
+        if (Objects.equals(form.getStatus(), oldStatus)) {
+            return makeSuccessResponse("Change status success");
+        }
         review.setStatus(form.getStatus());
         reviewRepository.save(review);
+        if (Objects.equals(oldStatus, BaseConstant.STATUS_ACTIVE) && Objects.equals(form.getStatus(), BaseConstant.STATUS_LOCK)) {
+            commentService.sendToxicReviewNotification(review);
+        } else if (Objects.equals(oldStatus, BaseConstant.STATUS_LOCK) && Objects.equals(form.getStatus(), BaseConstant.STATUS_ACTIVE)) {
+            commentService.sendReviewUnlockedNotification(review);
+        }
         return makeSuccessResponse("Change status success");
     }
 

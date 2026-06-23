@@ -46,7 +46,8 @@ public class SecurityConstant {
             // Internal APIs
             "/v1/server-config/internal/**",
             "/v1/room/internal/**",
-            "/v1/setting/internal/**"
+            "/v1/setting/internal/**",
+            "/v1/setting/public"
     );
 
     private SecurityConstant() {

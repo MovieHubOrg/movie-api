@@ -95,6 +95,40 @@ public class CommentService {
         sendToxicCommentNotification(comment);
     }
 
+    public void sendToxicCommentNotification(Comment comment) {
+        sendCommentStatusNotification(
+                comment,
+                "Bình luận của bạn đã bị ẩn do chứa nội dung không phù hợp",
+                BaseConstant.CMD_TOXIC_COMMENT_LOCKED
+        );
+    }
+
+    public void sendCommentUnlockedNotification(Comment comment) {
+        sendCommentStatusNotification(
+                comment,
+                "Bình luận của bạn đã được xem xét lại và mở khóa",
+                BaseConstant.CMD_COMMENT_UNLOCKED
+        );
+    }
+
+    private void sendCommentStatusNotification(Comment comment, String title, String cmd) {
+        Movie movie = movieRepository.findById(comment.getMovieId())
+                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+
+        CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
+        data.setMovieTitle(movie.getTitle());
+        data.setMovieThumbnail(movie.getThumbnailUrl());
+
+        notificationService.sendNotificationMessage(
+                title,
+                cmd,
+                data,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                String.valueOf(comment.getAuthor().getId())
+        );
+    }
+
     @Transactional
     public void handleDoneDetectorReview(DoneDetectorCommentForm form) throws JsonProcessingException {
         if (form == null || form.getCommentId() == null) {
@@ -114,40 +148,40 @@ public class CommentService {
         review.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
         reviewRepository.save(review);
 
-        // send notification to review author
-        ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
+        sendToxicReviewNotification(review);
+    }
+
+    public void sendToxicReviewNotification(Review review) {
+        sendReviewStatusNotification(
+                review,
+                "Đánh giá của bạn đã bị ẩn do chứa nội dung không phù hợp",
+                BaseConstant.CMD_TOXIC_REVIEW_LOCKED
+        );
+    }
+
+    public void sendReviewUnlockedNotification(Review review) {
+        sendReviewStatusNotification(
+                review,
+                "Đánh giá của bạn đã được xem xét lại và mở khóa",
+                BaseConstant.CMD_REVIEW_UNLOCKED
+        );
+    }
+
+    private void sendReviewStatusNotification(Review review, String title, String cmd) {
         Movie movie = movieRepository.findById(review.getMovieId())
                 .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
+
+        ReviewNotificationDto data = reviewMapper.entityToReviewNotificationDto(review);
         data.setMovieTitle(movie.getTitle());
         data.setMovieThumbnail(movie.getThumbnailUrl());
 
-        String title = "Đánh giá của bạn đã bị ẩn do chứa nội dung không phù hợp";
         notificationService.sendNotificationMessage(
                 title,
-                BaseConstant.CMD_TOXIC_REVIEW_LOCKED,
+                cmd,
                 data,
                 BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
                 String.valueOf(review.getAuthor().getId())
-        );
-    }
-
-    private void sendToxicCommentNotification(Comment comment) {
-        Movie movie = movieRepository.findById(comment.getMovieId())
-                .orElseThrow(() -> new NotFoundException("[Movie] not found", ErrorCode.MOVIE_ERROR_NOT_FOUND));
-
-        CommentNotificationDto data = commentMapper.entityToCommentNotificationDto(comment);
-        data.setMovieTitle(movie.getTitle());
-        data.setMovieThumbnail(movie.getThumbnailUrl());
-
-        String title = "Bình luận của bạn đã bị ẩn do chứa nội dung không phù hợp";
-        notificationService.sendNotificationMessage(
-                title,
-                BaseConstant.CMD_TOXIC_COMMENT_LOCKED,
-                data,
-                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
-                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
-                String.valueOf(comment.getAuthor().getId())
         );
     }
 }

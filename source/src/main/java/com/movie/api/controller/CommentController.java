@@ -314,11 +314,20 @@ public class CommentController extends ABasicController {
     public ApiMessageDto<Void> changeStatus(@Valid @RequestBody ChangeStatusForm form) {
         Comment comment = commentRepository.findById(form.getId())
                 .orElseThrow(() -> new NotFoundException("[Comment] Not found", ErrorCode.COMMENT_ERROR_NOT_FOUND));
-        if (comment.getParent() == null) {
-            commentRepository.updateStatusByParentId(comment.getId(), form.getStatus());
+        Integer oldStatus = comment.getStatus();
+//        if (comment.getParent() == null) {
+//            commentRepository.updateStatusByParentId(comment.getId(), form.getStatus());
+//        }
+        if (Objects.equals(form.getStatus(), oldStatus)) {
+            return makeSuccessResponse("Change status success");
         }
         comment.setStatus(form.getStatus());
         commentRepository.save(comment);
+        if (Objects.equals(oldStatus, BaseConstant.STATUS_ACTIVE) && Objects.equals(form.getStatus(), BaseConstant.STATUS_LOCK)) {
+            commentService.sendToxicCommentNotification(comment);
+        } else if (Objects.equals(oldStatus, BaseConstant.STATUS_LOCK) && Objects.equals(form.getStatus(), BaseConstant.STATUS_ACTIVE)) {
+            commentService.sendCommentUnlockedNotification(comment);
+        }
         return makeSuccessResponse("Change status success");
     }
 

@@ -235,7 +235,7 @@ public class RoomController extends ABasicController {
     }
 
     @GetMapping(value = "/get-by-code/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiMessageDto<RoomDto> get(@PathVariable String code) {
+    public ApiMessageDto<RoomDto> getByCode(@PathVariable String code) {
         Room room = roomRepository.findFirstByCodeAndStateNot(code, BaseConstant.ROOM_STATE_ENDING)
                 .orElseThrow(() -> new NotFoundException("[Room] Not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
         return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Get room success.");

@@ -23,4 +23,8 @@ public interface SettingRepository extends JpaRepository<Setting, Long>, JpaSpec
     List<Setting> findAllByGroupName(String groupName);
 
     Optional<Setting> findByKeyName(String keyName);
+
+    // Return distinct settings that are either non-system (public) or whose keyName is in the provided set
+    @Query("SELECT DISTINCT s FROM Setting s WHERE s.isSystem = false OR s.keyName IN :keyNames")
+    List<Setting> findDistinctPublicSettings(@Param("keyNames") java.util.Collection<String> keyNames);
 }

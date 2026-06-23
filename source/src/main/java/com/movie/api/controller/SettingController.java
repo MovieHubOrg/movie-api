@@ -27,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -140,10 +141,11 @@ public class SettingController extends ABasicController {
 
     @GetMapping(value = "/public", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<List<SettingDto>> listSetting() {
-        List<Setting> settings = settingRepository.findAllByIsSystem(false);
+        List<Setting> settings = settingRepository.findDistinctPublicSettings(BaseConstant.SETTING_PUBLIC_KEYS);
         return makeSuccessResponse(settingMapper.fromEntityToSettingDtoPublicList(settings), "Get list setting success");
     }
 
+    @ApiIgnore
     @GetMapping(value = "/internal/find-by-key/{keyName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<SettingDto> findByKey(@PathVariable String keyName,
                                                @RequestHeader(value = BaseConstant.HEADER_X_API_KEY) String apiKey) {

@@ -234,11 +234,23 @@ public class NotificationService {
             } catch (Exception e) {
                 log.warn("Failed to parse toxic comment data for notification message: {}", e.getMessage());
             }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_COMMENT_UNLOCKED)) {
+            try {
+                sendNotificationForm.setMessage("Bình luận của bạn đã được mở khóa");
+            } catch (Exception e) {
+                log.warn("Failed to parse unlocked comment data for notification message: {}", e.getMessage());
+            }
         } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_TOXIC_REVIEW_LOCKED)) {
             try {
                 sendNotificationForm.setMessage("Đánh giá của bạn đã bị ẩn do chứa nội dung không phù hợp");
             } catch (Exception e) {
                 log.warn("Failed to parse toxic review data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_REVIEW_UNLOCKED)) {
+            try {
+                sendNotificationForm.setMessage("Đánh giá của bạn đã được xem xét lại và mở khóa");
+            } catch (Exception e) {
+                log.warn("Failed to parse unlocked review data for notification message: {}", e.getMessage());
             }
         }
     }
