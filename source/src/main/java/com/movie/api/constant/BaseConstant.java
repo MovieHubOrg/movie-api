@@ -85,6 +85,7 @@ public class BaseConstant {
     public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
     public static final String CMD_CLIENT_PING = "CMD_CLIENT_PING";
     public static final String CMD_NEW_USER_REPORT = "CMD_NEW_USER_REPORT";
+    public static final String CMD_ROOM_INVITE = "CMD_ROOM_INVITE";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(
             BaseConstant.CMD_NEW_MOVIE,
@@ -95,7 +96,8 @@ public class BaseConstant {
             BaseConstant.CMD_TOXIC_COMMENT_LOCKED,
             BaseConstant.CMD_COMMENT_UNLOCKED,
             BaseConstant.CMD_TOXIC_REVIEW_LOCKED,
-            BaseConstant.CMD_REVIEW_UNLOCKED
+            BaseConstant.CMD_REVIEW_UNLOCKED,
+            BaseConstant.CMD_ROOM_INVITE
     );
 
     public static final Integer NOTIFICATION_TARGET_TYPE_APP = 1;

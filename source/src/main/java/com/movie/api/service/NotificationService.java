@@ -12,6 +12,7 @@ import com.movie.api.dto.oneSignal.Content;
 import com.movie.api.dto.oneSignal.IncludeAliases;
 import com.movie.api.dto.oneSignal.OneSignalPushNotificationForm;
 import com.movie.api.dto.review.ReviewNotificationDto;
+import com.movie.api.dto.room.RoomNotificationDto;
 import com.movie.api.form.notification.SendNotificationForm;
 import com.movie.api.service.mqtt.MqttOutboundService;
 import com.movie.api.service.rabbit.RabbitService;
@@ -251,6 +252,17 @@ public class NotificationService {
                 sendNotificationForm.setMessage("Đánh giá của bạn đã được xem xét lại và mở khóa");
             } catch (Exception e) {
                 log.warn("Failed to parse unlocked review data for notification message: {}", e.getMessage());
+            }
+        } else if (Objects.equals(sendNotificationForm.getCmd(), BaseConstant.CMD_ROOM_INVITE)) {
+            try {
+                RoomNotificationDto room = objectMapper.readValue(sendNotificationForm.getBody(), RoomNotificationDto.class);
+                String hostName = room.getHost() != null ? room.getHost().getFullName() : "Ai đó";
+                sendNotificationForm.setMessage(String.format("%s đã mời bạn vào phòng xem phim \"%s\"", hostName, room.getMovieTitle()));
+                if (room.getMovieThumbnail() != null) {
+                    sendNotificationForm.setImageUrl(BaseConstant.DOWNLOAD_MEDIA_API + room.getMovieThumbnail());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse room invite data for notification message: {}", e.getMessage());
             }
         }
     }

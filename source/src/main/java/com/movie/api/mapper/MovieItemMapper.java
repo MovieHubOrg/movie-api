@@ -126,6 +126,7 @@ public interface MovieItemMapper {
     @Mapping(source = "title", target = "title")
     @Mapping(source = "kind", target = "kind")
     @Mapping(source = "label", target = "label")
+    @Mapping(source = "parent", target = "season", qualifiedByName = "entityToMovieItemParentDto")
     @Mapping(source = "movie", target = "movie", qualifiedByName = "entityToMovieRoomDto")
     @Mapping(source = "thumbnailUrl", target = "thumbnailUrl")
     @BeanMapping(ignoreByDefault = true)

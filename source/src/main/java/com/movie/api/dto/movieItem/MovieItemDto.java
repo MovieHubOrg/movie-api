@@ -29,4 +29,5 @@ public class MovieItemDto extends ABasicAdminDto {
 
     private List<MovieItemDto> episodes;
     private MovieItemDto trailer;
+    private MovieItemDto season;
 }

@@ -5,10 +5,13 @@ import com.movie.api.dto.ApiMessageDto;
 import com.movie.api.dto.ErrorCode;
 import com.movie.api.dto.ResponseListDto;
 import com.movie.api.dto.room.RoomDto;
+import com.movie.api.dto.room.RoomNotificationDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.exception.UnauthorizationException;
+import com.movie.api.form.room.AddParticipantForm;
 import com.movie.api.form.room.CreateRoomForm;
+import com.movie.api.service.NotificationService;
 import com.movie.api.service.SettingCacheService;
 import com.movie.api.form.room.TestLeftParticipantForm;
 import com.movie.api.mapper.RoomMapper;
@@ -24,14 +27,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v1/room")
@@ -63,6 +65,9 @@ public class RoomController extends ABasicController {
 
     @Autowired
     private SettingCacheService settingCacheService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping(value = "/check", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<RoomDto> check() {
@@ -127,6 +132,24 @@ public class RoomController extends ABasicController {
 
         room.setParticipantCount(participants.size());
         roomRepository.save(room);
+
+        List<Long> guestIds = participants.stream()
+                .filter(p -> !Objects.equals(p.getRole(), BaseConstant.PARTICIPANT_ROLE_HOST))
+                .map(p -> p.getUser().getId())
+                .collect(java.util.stream.Collectors.toList());
+        if (!guestIds.isEmpty()) {
+            RoomNotificationDto roomNotificationDto = roomMapper.entityToRoomNotificationDto(room);
+            String targetValue = guestIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            notificationService.sendNotificationMessage(
+                    "Lời mời vào phòng xem phim",
+                    BaseConstant.CMD_ROOM_INVITE,
+                    roomNotificationDto,
+                    BaseConstant.NOTIFICATION_TYPE_MOVIE,
+                    BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                    targetValue
+            );
+        }
+
         return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Create room success");
     }
 
@@ -271,6 +294,66 @@ public class RoomController extends ABasicController {
         chatRepository.deleteByRoomId(id);
         roomRepository.delete(room);
         return makeSuccessResponse("Delete room successfully");
+    }
+
+    @PostMapping(value = "/add-participants", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiMessageDto<Void> addParticipants(@Valid @RequestBody AddParticipantForm form, BindingResult bindingResult) {
+        Room room = roomRepository.findById(form.getRoomId())
+                .orElseThrow(() -> new NotFoundException("[Room] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
+        if (!Objects.equals(room.getHost().getId(), getCurrentUser())) {
+            throw new UnauthorizationException("Not allow");
+        }
+        if (Objects.equals(room.getState(), BaseConstant.ROOM_STATE_ENDING)) {
+            throw new BadRequestException("[Room] room has ended", ErrorCode.ROOM_ERROR_INVALID_STATE);
+        }
+
+        List<Long> requestedIds = form.getAccountIds();
+        List<Participant> existingParticipants = participantRepository.findAllByRoomIdAndUserIdIn(room.getId(), requestedIds);
+        Set<Long> alreadyInRoom = existingParticipants.stream()
+                .map(p -> p.getUser().getId())
+                .collect(Collectors.toSet());
+
+        List<Long> newIds = requestedIds.stream()
+                .filter(accId -> !alreadyInRoom.contains(accId))
+                .collect(Collectors.toList());
+        if (newIds.isEmpty()) {
+            return makeSuccessResponse("No new participants to add");
+        }
+
+        List<Account> newAccounts = accountRepository.findAllByIdInAndKindAndStatus(
+                newIds, BaseConstant.ACCOUNT_KIND_USER, BaseConstant.STATUS_ACTIVE);
+        if (newAccounts.isEmpty()) {
+            return makeSuccessResponse("No valid accounts found");
+        }
+
+        List<Participant> participants = new ArrayList<>();
+        for (Account account : newAccounts) {
+            Participant participant = new Participant();
+            participant.setRoom(room);
+            participant.setUser(account);
+            participant.setRole(BaseConstant.PARTICIPANT_ROLE_GUEST);
+            participant.setState(BaseConstant.PARTICIPANT_STATE_PENDING);
+            participants.add(participant);
+        }
+        participantRepository.saveAll(participants);
+
+        room.setParticipantCount(room.getParticipantCount() + newAccounts.size());
+        roomRepository.save(room);
+
+        RoomNotificationDto roomNotificationDto = roomMapper.entityToRoomNotificationDto(room);
+        String targetValue = newAccounts.stream()
+                .map(a -> String.valueOf(a.getId()))
+                .collect(java.util.stream.Collectors.joining(","));
+        notificationService.sendNotificationMessage(
+                "Lời mời vào phòng xem phim",
+                BaseConstant.CMD_ROOM_INVITE,
+                roomNotificationDto,
+                BaseConstant.NOTIFICATION_TYPE_MOVIE,
+                BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
+                targetValue
+        );
+
+        return makeSuccessResponse("Add participants success");
     }
 
     @ApiIgnore

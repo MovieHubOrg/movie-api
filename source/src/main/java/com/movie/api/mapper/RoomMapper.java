@@ -1,6 +1,7 @@
 package com.movie.api.mapper;
 
 import com.movie.api.dto.room.RoomDto;
+import com.movie.api.dto.room.RoomNotificationDto;
 import com.movie.api.form.room.CreateRoomForm;
 import com.movie.api.storage.model.Room;
 import org.mapstruct.BeanMapping;
@@ -35,6 +36,21 @@ public interface RoomMapper {
 
     @IterableMapping(elementTargetType = RoomDto.class, qualifiedByName = "entityToRoomDto")
     List<RoomDto> fromEntityToRoomDtoList(List<Room> rooms);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "name", target = "name")
+    @Mapping(source = "code", target = "code")
+    @Mapping(source = "kind", target = "kind")
+    @Mapping(source = "startTime", target = "startTime")
+    @Mapping(source = "endTime", target = "endTime")
+    @Mapping(source = "movieItem.id", target = "movieItemId")
+    @Mapping(source = "movieItem.movie.id", target = "movieId")
+    @Mapping(source = "movieItem.movie.title", target = "movieTitle")
+    @Mapping(source = "movieItem.thumbnailUrl", target = "movieThumbnail")
+    @Mapping(source = "host", target = "host", qualifiedByName = "entityToAccountNotificationDto")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToRoomNotificationDto")
+    RoomNotificationDto entityToRoomNotificationDto(Room room);
 
     @Mapping(source = "name", target = "name")
     @Mapping(source = "kind", target = "kind")
