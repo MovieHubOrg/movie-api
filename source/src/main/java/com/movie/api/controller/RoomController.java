@@ -88,7 +88,7 @@ public class RoomController extends ABasicController {
         }
 
         Date startTime = Boolean.TRUE.equals(form.getIsStartNow())
-                ? new Date()
+                ? truncateToSeconds(new Date())
                 : form.getStartTime();
         Date endTime = calculateEndTime(movieItem, startTime);
         if (!endTime.after(startTime)) {
@@ -394,6 +394,10 @@ public class RoomController extends ABasicController {
 
         Integer extraEndingMinutes = settingCacheService.getIntegerValue(BaseConstant.SETTING_KEY_LIVE_ROOM_EXTRA_ENDING_TIME);
         return DateUtils.addMinutes(endTime, extraEndingMinutes);
+    }
+
+    private Date truncateToSeconds(Date date) {
+        return new Date((date.getTime() / 1000) * 1000);
     }
 
     private boolean isValidRoomMovieItem(MovieItem movieItem) {

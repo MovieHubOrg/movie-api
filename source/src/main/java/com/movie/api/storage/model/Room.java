@@ -33,7 +33,7 @@ public class Room extends Auditable<String> {
 
     private Date endTime;
 
-    private Integer state = 1; // 0: pending, 1: running, 2: ending
+    private Integer state; // 0: pending, 1: running, 2: ending
 
     private Date lastTimeOnline;
 

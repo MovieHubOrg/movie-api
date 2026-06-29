@@ -18,4 +18,13 @@ public class RoomScheduler {
         int endedRooms = roomService.endTimedOutRunningRooms();
         log.info("======> End scheduler endTimedOutRooms, ended {} room(s)", endedRooms);
     }
+
+    // TODO: production schedule — run every 6 hours
+     @Scheduled(cron = "0 0 */6 * * *")
+//    @Scheduled(fixedDelay = 1000)
+    public void deleteExpiredPendingRooms() {
+        log.info("======> Start scheduler deleteExpiredPendingRooms");
+        int deleted = roomService.deleteExpiredPendingRooms();
+        log.info("======> End scheduler deleteExpiredPendingRooms, deleted {} room(s)", deleted);
+    }
 }

@@ -113,7 +113,7 @@ public class CollectionController extends ABasicController {
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<CollectionDto> get(@PathVariable Long id) {
         Collection collection = collectionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("[Collection] Not found", ErrorCode.COMMENT_ERROR_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("[Collection] Not found", ErrorCode.COLLECTION_ERROR_NOT_FOUND));
         return makeSuccessResponse(collectionMapper.entityToCollectionDto(collection), "Get collection success");
     }
 

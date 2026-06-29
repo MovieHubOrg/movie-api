@@ -26,6 +26,11 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long>,
     @Query("DELETE FROM Participant p WHERE p.room.id = :roomId")
     void deleteByRoomId(@Param("roomId") Long roomId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Participant p WHERE p.room.id IN :roomIds")
+    void deleteByRoomIdIn(@Param("roomIds") List<Long> roomIds);
+
     boolean existsByRoomIdAndRoleAndState(Long roomId, Integer role, Integer state);
 
     @Modifying

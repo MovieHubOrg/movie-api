@@ -40,4 +40,12 @@ public interface RoomRepository extends JpaRepository<Room, Long>, JpaSpecificat
                                           @Param("currentState") Integer currentState,
                                           @Param("newState") Integer newState,
                                           @Param("endTime") Date endTime);
+
+    @Query("SELECT r FROM Room r WHERE r.state = :state AND r.endTime < :now")
+    List<Room> findExpiredPendingRooms(@Param("state") Integer state, @Param("now") Date now);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Room r WHERE r.id IN :ids")
+    void deleteByIdIn(@Param("ids") List<Long> ids);
 }

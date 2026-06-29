@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -188,6 +189,18 @@ public class RoomService {
             }
         }
         return endedRooms;
+    }
+
+    public int deleteExpiredPendingRooms() {
+        Date oneDayAgo = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000L);
+        List<Room> expiredRooms = roomRepository.findExpiredPendingRooms(BaseConstant.ROOM_STATE_PENDING, oneDayAgo);
+        if (expiredRooms.isEmpty()) {
+            return 0;
+        }
+        List<Long> ids = expiredRooms.stream().map(Room::getId).collect(Collectors.toList());
+        participantRepository.deleteByRoomIdIn(ids);
+        roomRepository.deleteByIdIn(ids);
+        return ids.size();
     }
 
     public boolean endRoom(Room room, String reason) {
