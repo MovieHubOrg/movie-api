@@ -198,6 +198,9 @@ public class BaseConstant {
     public static final Integer TOXIC_DETECT_TYPE_COMMENT = 1;
     public static final Integer TOXIC_DETECT_TYPE_REVIEW = 2;
 
+    public static final String SETTING_KEY_ALLOW_TOXIC_KEYWORDS = "allow_toxic_keywords";
+    public static final String SETTING_KEY_BLACKLIST_TOXIC_KEYWORDS = "blacklist_toxic_keywords";
+
     // User report types
     public static final Integer USER_REPORT_TYPE_COMMENT = 1;
     public static final Integer USER_REPORT_TYPE_REVIEW = 2;

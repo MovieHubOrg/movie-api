@@ -19,13 +19,19 @@ import com.movie.api.storage.model.Review;
 import com.movie.api.storage.repository.CommentRepository;
 import com.movie.api.storage.repository.MovieRepository;
 import com.movie.api.storage.repository.ReviewRepository;
+import com.movie.api.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -60,6 +66,9 @@ public class CommentService {
     @Autowired
     private ReviewMapper reviewMapper;
 
+    @Autowired
+    private SettingCacheService settingCacheService;
+
     public void sendCommentToToxicDetector(Long objectId, String content, Integer type) {
         try {
             log.info("==> Sending comment to toxic detector: {} type : {}", objectId, type);
@@ -80,14 +89,15 @@ public class CommentService {
             return;
         }
 
-        List<ToxicSpanForm> toxicSpans = form.getToxicSpans();
-        if (toxicSpans == null || toxicSpans.isEmpty()) {
-            log.info("Comment {} has no toxic spans", form.getCommentId());
+        Comment comment = commentRepository.findById(form.getCommentId())
+                .orElseThrow(() -> new NotFoundException("[Comment] not found"));
+
+        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), comment.getContent());
+        if (toxicSpans.isEmpty()) {
+            log.info("Comment {} has no toxic spans after keyword filtering", form.getCommentId());
             return;
         }
 
-        Comment comment = commentRepository.findById(form.getCommentId())
-                .orElseThrow(() -> new NotFoundException("[Comment] not found"));
         comment.setStatus(BaseConstant.STATUS_LOCK);
         comment.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
         commentRepository.save(comment);
@@ -136,14 +146,15 @@ public class CommentService {
             return;
         }
 
-        List<ToxicSpanForm> toxicSpans = form.getToxicSpans();
-        if (toxicSpans == null || toxicSpans.isEmpty()) {
-            log.info("Review {} has no toxic spans", form.getCommentId());
+        Review review = reviewRepository.findById(form.getCommentId())
+                .orElseThrow(() -> new NotFoundException("[Review] not found"));
+
+        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), review.getContent());
+        if (toxicSpans.isEmpty()) {
+            log.info("Review {} has no toxic spans after keyword filtering", form.getCommentId());
             return;
         }
 
-        Review review = reviewRepository.findById(form.getCommentId())
-                .orElseThrow(() -> new NotFoundException("[Review] not found"));
         review.setStatus(BaseConstant.STATUS_LOCK);
         review.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
         reviewRepository.save(review);
@@ -183,5 +194,102 @@ public class CommentService {
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
                 String.valueOf(review.getAuthor().getId())
         );
+    }
+
+    private List<ToxicSpanForm> applyToxicKeywordSettings(List<ToxicSpanForm> toxicSpans, String content) {
+        if (StringUtils.isNullOrEmpty(content)) return new ArrayList<>();
+        Set<String> allowKeywords = getKeywordSet(BaseConstant.SETTING_KEY_ALLOW_TOXIC_KEYWORDS);
+        Set<String> blacklistKeywords = getKeywordSet(BaseConstant.SETTING_KEY_BLACKLIST_TOXIC_KEYWORDS);
+
+        List<ToxicSpanForm> candidates = new ArrayList<>();
+
+        // Keep detector spans whose text is not in the allow list
+        if (toxicSpans != null) {
+            for (ToxicSpanForm span : toxicSpans) {
+                String spanText = extractSpanText(content, span);
+                if (!spanText.isEmpty() && !allowKeywords.contains(spanText)) {
+                    candidates.add(span);
+                }
+            }
+        }
+
+        // Add all occurrences of every blacklist keyword found in content
+        String lowerContent = content.toLowerCase();
+        for (String keyword : blacklistKeywords) {
+            int idx = 0;
+            while ((idx = lowerContent.indexOf(keyword, idx)) != -1) {
+                int end = idx + keyword.length();
+                ToxicSpanForm newSpan = new ToxicSpanForm();
+                newSpan.setStart(idx);
+                newSpan.setEnd(end);
+                candidates.add(newSpan);
+                idx = end;
+            }
+        }
+
+        // Sort and merge to eliminate duplicates and overlapping spans
+        return mergeSpans(candidates);
+    }
+
+    /**
+     * Sorts spans by start index, then merges any that overlap.
+     * Adjacent spans [a,b) [b,c) are kept separate — only true overlaps are merged.
+     * end is exclusive: span covers content[start..end-1].
+     */
+    private List<ToxicSpanForm> mergeSpans(List<ToxicSpanForm> spans) {
+        List<ToxicSpanForm> valid = spans.stream()
+                .filter(s -> s.getStart() != null && s.getEnd() != null && s.getStart() < s.getEnd())
+                .sorted(Comparator.comparingInt(ToxicSpanForm::getStart).thenComparingInt(ToxicSpanForm::getEnd))
+                .collect(Collectors.toList());
+
+        if (valid.isEmpty()) return valid;
+
+        List<ToxicSpanForm> merged = new ArrayList<>();
+        int curStart = valid.get(0).getStart();
+        int curEnd = valid.get(0).getEnd();
+
+        for (int i = 1; i < valid.size(); i++) {
+            ToxicSpanForm next = valid.get(i);
+            if (next.getStart() < curEnd) {
+                // Overlapping — extend current end
+                curEnd = Math.max(curEnd, next.getEnd());
+            } else {
+                ToxicSpanForm span = new ToxicSpanForm();
+                span.setStart(curStart);
+                span.setEnd(curEnd);
+                merged.add(span);
+                curStart = next.getStart();
+                curEnd = next.getEnd();
+            }
+        }
+        ToxicSpanForm last = new ToxicSpanForm();
+        last.setStart(curStart);
+        last.setEnd(curEnd);
+        merged.add(last);
+
+        return merged;
+    }
+
+    private String extractSpanText(String content, ToxicSpanForm span) {
+        if (span.getStart() == null || span.getEnd() == null) return "";
+        int start = Math.max(0, span.getStart());
+        int end = Math.min(content.length(), span.getEnd());
+        if (start >= end) return "";
+        return content.substring(start, end).toLowerCase();
+    }
+
+    private Set<String> getKeywordSet(String settingKey) {
+        try {
+            String value = settingCacheService.getValue(settingKey);
+            if (value == null || value.isBlank()) return Set.of();
+            return Arrays.stream(value.split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toSet());
+        } catch (NotFoundException e) {
+            log.warn("Setting not found: {}", settingKey);
+            return Set.of();
+        }
     }
 }
