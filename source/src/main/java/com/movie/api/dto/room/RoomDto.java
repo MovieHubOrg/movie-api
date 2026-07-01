@@ -22,4 +22,5 @@ public class RoomDto extends ABasicAdminDto {
     private Date endTime;
     private Integer state;
     private Integer participantCount;
+    private Integer currentViewers;
 }

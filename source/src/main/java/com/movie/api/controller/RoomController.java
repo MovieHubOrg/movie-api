@@ -136,15 +136,15 @@ public class RoomController extends ABasicController {
         List<Long> guestIds = participants.stream()
                 .filter(p -> !Objects.equals(p.getRole(), BaseConstant.PARTICIPANT_ROLE_HOST))
                 .map(p -> p.getUser().getId())
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
         if (!guestIds.isEmpty()) {
             RoomNotificationDto roomNotificationDto = roomMapper.entityToRoomNotificationDto(room);
-            String targetValue = guestIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            String targetValue = guestIds.stream().map(String::valueOf).collect(Collectors.joining(","));
             notificationService.sendNotificationMessage(
                     "Lời mời vào phòng xem phim",
                     BaseConstant.CMD_ROOM_INVITE,
                     roomNotificationDto,
-                    BaseConstant.NOTIFICATION_TYPE_MOVIE,
+                    BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                     BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
                     targetValue
             );
@@ -247,7 +247,9 @@ public class RoomController extends ABasicController {
         }
         participantRepository.save(participant);
         roomService.publishCurrentViewerCount(room);
-        return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Join room success.");
+        RoomDto roomDto = roomMapper.entityToRoomDto(room);
+        roomDto.setCurrentViewers(participantRepository.countByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN));
+        return makeSuccessResponse(roomDto, "Join room success.");
     }
 
     @GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -343,12 +345,12 @@ public class RoomController extends ABasicController {
         RoomNotificationDto roomNotificationDto = roomMapper.entityToRoomNotificationDto(room);
         String targetValue = newAccounts.stream()
                 .map(a -> String.valueOf(a.getId()))
-                .collect(java.util.stream.Collectors.joining(","));
+                .collect(Collectors.joining(","));
         notificationService.sendNotificationMessage(
                 "Lời mời vào phòng xem phim",
                 BaseConstant.CMD_ROOM_INVITE,
                 roomNotificationDto,
-                BaseConstant.NOTIFICATION_TYPE_MOVIE,
+                BaseConstant.NOTIFICATION_TYPE_COMMUNITY,
                 BaseConstant.NOTIFICATION_TARGET_TYPE_ACCOUNT,
                 targetValue
         );

@@ -17,7 +17,7 @@ import java.lang.annotation.Target;
 public @interface SettingDataTypeConstraint {
     boolean allowNull() default false;
 
-    String message() default "dataType must be one of: Integer, String, Boolean, Double, RichText, Select, Upload";
+    String message() default "dataType must be one of: Integer, String, Boolean, Double, RichText, Select, Upload, List";
 
     Class<?>[] groups() default {};
 

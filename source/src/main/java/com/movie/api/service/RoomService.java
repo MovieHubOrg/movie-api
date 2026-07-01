@@ -270,6 +270,6 @@ public class RoomService {
 
     private <T> void publishToRoom(Long roomId, String cmd, T data) {
         String topic = roomTopicPrefix + "/" + roomId;
-        mqttOutboundService.sendToClient(topic, cmd, data, BaseConstant.MQTT_QOS_LEVEL_0);
+        mqttOutboundService.sendToClient(topic, cmd, data, BaseConstant.MQTT_QOS_LEVEL_2);
     }
 }

@@ -14,7 +14,8 @@ public class SettingDataTypeValidation implements ConstraintValidator<SettingDat
             "Double",
             "RichText",
             "Select",
-            "Upload"
+            "Upload",
+            "List"
     );
 
     private boolean allowNull;
