@@ -31,4 +31,15 @@ public interface ParticipantMapper {
 
     @IterableMapping(elementTargetType = ParticipantDto.class, qualifiedByName = "entityToParticipantDto")
     List<ParticipantDto> fromEntityToParticipantDtoList(List<Participant> participants);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "user", target = "user", qualifiedByName = "entityToAccountDto")
+    @Mapping(source = "role", target = "role")
+    @Mapping(source = "state", target = "state")
+    @BeanMapping(ignoreByDefault = true)
+    @Named("entityToParticipantDtoForRoom")
+    ParticipantDto entityToParticipantDtoForRoom(Participant participant);
+
+    @IterableMapping(elementTargetType = ParticipantDto.class, qualifiedByName = "entityToParticipantDtoForRoom")
+    List<ParticipantDto> fromEntityToParticipantDtoForRoomList(List<Participant> participants);
 }

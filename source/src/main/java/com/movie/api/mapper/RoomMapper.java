@@ -30,6 +30,7 @@ public interface RoomMapper {
     @Mapping(source = "state", target = "state")
     @Mapping(source = "participantCount", target = "participantCount")
     @Mapping(source = "createdDate", target = "createdDate")
+    @Mapping(source = "reasonEnd", target = "reasonEnd")
     @BeanMapping(ignoreByDefault = true)
     @Named("entityToRoomDto")
     RoomDto entityToRoomDto(Room room);

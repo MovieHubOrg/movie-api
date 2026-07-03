@@ -204,6 +204,7 @@ public class BaseConstant {
     // User report types
     public static final Integer USER_REPORT_TYPE_COMMENT = 1;
     public static final Integer USER_REPORT_TYPE_REVIEW = 2;
+    public static final Integer USER_REPORT_TYPE_VIDEO = 3;
 
     private BaseConstant(){
         throw new IllegalStateException("Utility class");

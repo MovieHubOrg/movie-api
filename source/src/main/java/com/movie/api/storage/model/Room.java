@@ -38,4 +38,6 @@ public class Room extends Auditable<String> {
     private Date lastTimeOnline;
 
     private Integer participantCount = 0;
+
+    private String reasonEnd;
 }

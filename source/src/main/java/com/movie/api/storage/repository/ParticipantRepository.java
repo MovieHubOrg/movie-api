@@ -43,4 +43,6 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long>,
     );
 
     int countByRoomIdAndState(Long roomId, Integer state);
+
+    List<Participant> findByRoomIdAndState(Long roomId, Integer state);
 }

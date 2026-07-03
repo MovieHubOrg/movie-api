@@ -4,6 +4,8 @@ import com.movie.api.storage.model.Participant;
 import lombok.Data;
 import org.springframework.data.jpa.domain.Specification;
 
+import org.springframework.util.StringUtils;
+
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -15,11 +17,9 @@ import java.util.List;
 public class ParticipantCriteria {
     private Long id;
     private Long roomId;
-    private Long userId;
-    private Long hostId;
     private Integer role;
     private Integer state;
-    private Integer status;
+    private String keyword;
 
     public Specification<Participant> getSpecification() {
         return new Specification<Participant>() {
@@ -32,20 +32,8 @@ public class ParticipantCriteria {
                     predicates.add(cb.equal(root.get("id"), getId()));
                 }
 
-                if (getStatus() != null) {
-                    predicates.add(cb.equal(root.get("status"), getStatus()));
-                }
-
                 if (getRoomId() != null) {
                     predicates.add(cb.equal(root.get("room").get("id"), getRoomId()));
-                }
-
-                if (getUserId() != null) {
-                    predicates.add(cb.equal(root.get("user").get("id"), getUserId()));
-                }
-
-                if (getHostId() != null) {
-                    predicates.add(cb.equal(root.get("room").get("host").get("id"), getHostId()));
                 }
 
                 if (getRole() != null) {
@@ -54,6 +42,14 @@ public class ParticipantCriteria {
 
                 if (getState() != null) {
                     predicates.add(cb.equal(root.get("state"), getState()));
+                }
+
+                if (StringUtils.hasText(getKeyword())) {
+                    String keyword = "%" + getKeyword().trim().toLowerCase() + "%";
+                    Predicate usernameLike = cb.like(cb.lower(root.get("user").get("username")), keyword);
+                    Predicate emailLike = cb.like(cb.lower(root.get("user").get("email")), keyword);
+                    Predicate fullNameLike = cb.like(cb.lower(root.get("user").get("fullName")), keyword);
+                    predicates.add(cb.or(usernameLike, emailLike, fullNameLike));
                 }
 
                 return cb.and(predicates.toArray(new Predicate[0]));

@@ -21,6 +21,7 @@ public class UserReportTypeValidation implements ConstraintValidator<UserReportT
             return true;
         }
         return Objects.equals(value, BaseConstant.USER_REPORT_TYPE_COMMENT)
-                || Objects.equals(value, BaseConstant.USER_REPORT_TYPE_REVIEW);
+                || Objects.equals(value, BaseConstant.USER_REPORT_TYPE_REVIEW)
+                || Objects.equals(value, BaseConstant.USER_REPORT_TYPE_VIDEO);
     }
 }

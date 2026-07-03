@@ -15,6 +15,7 @@ import com.movie.api.service.NotificationService;
 import com.movie.api.storage.criteria.UserReportCriteria;
 import com.movie.api.storage.model.*;
 import com.movie.api.storage.repository.*;
+import com.movie.api.storage.repository.VideoLibraryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -54,6 +55,9 @@ public class UserReportController extends ABasicController {
 
     @Autowired
     private MovieRepository movieRepository;
+
+    @Autowired
+    private VideoLibraryRepository videoLibraryRepository;
 
     @PostMapping(value = "/create", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('URP_C')")
@@ -109,6 +113,10 @@ public class UserReportController extends ABasicController {
             metadata.setMovieId(movie.getId().toString());
             metadata.setMovieTitle(movie.getTitle());
             metadata.setMovieThumbnail(movie.getThumbnailUrl());
+        } else if (Objects.equals(form.getType(), BaseConstant.USER_REPORT_TYPE_VIDEO)) {
+            VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getObjectId())
+                    .orElseThrow(() -> new NotFoundException("[VideoLibrary] not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
+            title = String.format("%s đã báo cáo video %s", user.getFullName(), videoLibrary.getName());
         }
 
         if (userReportRepository.existsByUserIdAndObjectIdAndType(user.getId(), form.getObjectId(), form.getType())) {

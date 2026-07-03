@@ -9,6 +9,7 @@ import com.movie.api.dto.room.RoomNotificationDto;
 import com.movie.api.exception.BadRequestException;
 import com.movie.api.exception.NotFoundException;
 import com.movie.api.exception.UnauthorizationException;
+import com.movie.api.mapper.ParticipantMapper;
 import com.movie.api.form.room.AddParticipantForm;
 import com.movie.api.form.room.CreateRoomForm;
 import com.movie.api.service.NotificationService;
@@ -56,6 +57,9 @@ public class RoomController extends ABasicController {
 
     @Autowired
     private ParticipantRepository participantRepository;
+
+    @Autowired
+    private ParticipantMapper participantMapper;
 
     @Autowired
     private ChatRepository chatRepository;
@@ -247,8 +251,10 @@ public class RoomController extends ABasicController {
         }
         participantRepository.save(participant);
         roomService.publishCurrentViewerCount(room);
+        List<Participant> joinedParticipants = participantRepository.findByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
         RoomDto roomDto = roomMapper.entityToRoomDto(room);
-        roomDto.setCurrentViewers(participantRepository.countByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN));
+        roomDto.setCurrentViewers(joinedParticipants.size());
+        roomDto.setParticipants(participantMapper.fromEntityToParticipantDtoForRoomList(joinedParticipants));
         return makeSuccessResponse(roomDto, "Join room success.");
     }
 

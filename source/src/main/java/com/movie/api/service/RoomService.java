@@ -23,6 +23,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.movie.api.dto.participant.ParticipantDto;
+import com.movie.api.mapper.ParticipantMapper;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
@@ -44,6 +47,8 @@ public class RoomService {
     private ObjectMapper objectMapper;
     @Autowired
     private FormValidation formValidation;
+    @Autowired
+    private ParticipantMapper participantMapper;
     @Autowired
     private MqttOutboundService mqttOutboundService;
     @Value("${mqtt.topic.room.prefix}")
@@ -204,20 +209,15 @@ public class RoomService {
     }
 
     public boolean endRoom(Room room, String reason) {
-        Date endedAt = new Date();
-        int updated = roomRepository.updateStateAndEndTimeByIdAndState(
-                room.getId(),
-                BaseConstant.ROOM_STATE_RUNNING,
-                BaseConstant.ROOM_STATE_ENDING,
-                endedAt
-        );
-        if (updated == 0) {
+        if (!BaseConstant.ROOM_STATE_RUNNING.equals(room.getState())) {
             log.info("Skip ending room {} because it is no longer running", room.getId());
             return false;
         }
 
         room.setState(BaseConstant.ROOM_STATE_ENDING);
-        room.setEndTime(endedAt);
+        room.setEndTime(new Date());
+        room.setReasonEnd(reason);
+        roomRepository.save(room);
         log.info("Room {} ended with reason {}", room.getId(), reason);
 
         // 2. Update tất cả participant còn JOINED → LEFT
@@ -235,12 +235,14 @@ public class RoomService {
     }
 
     public void publishCurrentViewerCount(Room room) {
-        int currentViewers = participantRepository.countByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
+        List<Participant> joinedParticipants = participantRepository.findByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
+        List<ParticipantDto> participantDtos = participantMapper.fromEntityToParticipantDtoForRoomList(joinedParticipants);
         UpdateParticipantCountForm form = new UpdateParticipantCountForm();
         form.setRoomId(String.valueOf(room.getId()));
-        form.setCurrentViewers(currentViewers);
+        form.setCurrentViewers(joinedParticipants.size());
+        form.setParticipants(participantDtos);
         publishToRoom(room.getId(), BaseConstant.CMD_UPDATE_PARTICIPANT_COUNT, form);
-        log.info("Room {} current viewers: {}", room.getId(), currentViewers);
+        log.info("Room {} current viewers: {}", room.getId(), joinedParticipants.size());
     }
 
     public void publishParticipantLeft(Long roomId, Long accountId) {

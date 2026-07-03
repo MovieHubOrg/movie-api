@@ -100,17 +100,14 @@ public class ParticipantController extends ABasicController {
     public ApiMessageDto<ParticipantDto> get(@PathVariable Long id) {
         Participant participant = participantRepository.findByIdAndStatus(id, BaseConstant.STATUS_ACTIVE)
                 .orElseThrow(() -> new NotFoundException("[Participant] not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
-        validateHostRoom(participant.getRoom());
         return makeSuccessResponse(participantMapper.entityToParticipantDto(participant), "Get participant success.");
     }
 
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiMessageDto<ResponseListDto<List<ParticipantDto>>> list(ParticipantCriteria criteria, Pageable pageable) {
-        criteria.setHostId(getCurrentUser());
-        criteria.setStatus(BaseConstant.STATUS_ACTIVE);
         Page<Participant> participants = participantRepository.findAll(criteria.getSpecification(), pageable);
         return makeSuccessResponse(
-                makeResponseListDto(participants, participantMapper::fromEntityToParticipantDtoList),
+                makeResponseListDto(participants, participantMapper::fromEntityToParticipantDtoForRoomList),
                 "List participant success"
         );
     }

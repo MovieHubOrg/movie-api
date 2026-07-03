@@ -33,14 +33,6 @@ public interface RoomRepository extends JpaRepository<Room, Long>, JpaSpecificat
 
     boolean existsByHostIdAndState(Long hostId, Integer state);
 
-    @Modifying
-    @Transactional
-    @Query("UPDATE Room r SET r.state = :newState, r.endTime = :endTime WHERE r.id = :roomId AND r.state = :currentState")
-    int updateStateAndEndTimeByIdAndState(@Param("roomId") Long roomId,
-                                          @Param("currentState") Integer currentState,
-                                          @Param("newState") Integer newState,
-                                          @Param("endTime") Date endTime);
-
     @Query("SELECT r FROM Room r WHERE r.state = :state AND r.endTime < :now")
     List<Room> findExpiredPendingRooms(@Param("state") Integer state, @Param("now") Date now);
 
