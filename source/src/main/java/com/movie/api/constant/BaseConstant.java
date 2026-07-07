@@ -85,6 +85,7 @@ public class BaseConstant {
     public static final String CMD_CREATE_CHAT = "CMD_CREATE_CHAT";
     public static final String CMD_CLIENT_PING = "CMD_CLIENT_PING";
     public static final String CMD_NEW_USER_REPORT = "CMD_NEW_USER_REPORT";
+    public static final String CMD_NEW_VIDEO_REPORT = "CMD_NEW_VIDEO_REPORT";
     public static final String CMD_ROOM_INVITE = "CMD_ROOM_INVITE";
 
     public static final Set<String> ONE_SIGNAL_ALLOWED_CMD = Set.of(

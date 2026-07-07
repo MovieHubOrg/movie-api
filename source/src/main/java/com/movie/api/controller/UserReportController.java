@@ -117,6 +117,12 @@ public class UserReportController extends ABasicController {
             VideoLibrary videoLibrary = videoLibraryRepository.findById(form.getObjectId())
                     .orElseThrow(() -> new NotFoundException("[VideoLibrary] not found", ErrorCode.VIDEO_LIBRARY_ERROR_NOT_FOUND));
             title = String.format("%s đã báo cáo video %s", user.getFullName(), videoLibrary.getName());
+            metadata.setVideoId(videoLibrary.getId().toString());
+            metadata.setVideoName(videoLibrary.getName());
+            metadata.setVideoDuration(videoLibrary.getDuration());
+            metadata.setVideoSourceType(videoLibrary.getSourceType());
+            metadata.setVideoState(videoLibrary.getState());
+            metadata.setVideoThumbnailUrl(videoLibrary.getThumbnailUrl());
         }
 
         if (userReportRepository.existsByUserIdAndObjectIdAndType(user.getId(), form.getObjectId(), form.getType())) {
@@ -128,7 +134,10 @@ public class UserReportController extends ABasicController {
         userReportRepository.save(report);
 
         if (title != null) {
-            sendNotificationForUserReport(report, title, BaseConstant.CMD_NEW_USER_REPORT, metadata);
+            String cmd = Objects.equals(form.getType(), BaseConstant.USER_REPORT_TYPE_VIDEO)
+                    ? BaseConstant.CMD_NEW_VIDEO_REPORT
+                    : BaseConstant.CMD_NEW_USER_REPORT;
+            sendNotificationForUserReport(report, title, cmd, metadata);
         }
 
         return makeSuccessResponse("Report success");

@@ -49,6 +49,12 @@ public interface UserReportMapper {
     @Mapping(source = "movieTitle", target = "movieTitle")
     @Mapping(source = "movieThumbnail", target = "movieThumbnail")
     @Mapping(source = "parentId", target = "parentId")
+    @Mapping(source = "videoId", target = "videoId")
+    @Mapping(source = "videoName", target = "videoName")
+    @Mapping(source = "videoDuration", target = "videoDuration")
+    @Mapping(source = "videoSourceType", target = "videoSourceType")
+    @Mapping(source = "videoState", target = "videoState")
+    @Mapping(source = "videoThumbnailUrl", target = "videoThumbnailUrl")
     @BeanMapping(ignoreByDefault = true)
     void updateFromMetaDataToUserReportNotificationDto(UserReportMetadataDto metadata, @MappingTarget UserReportNotificationDto data);
 }

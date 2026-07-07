@@ -18,4 +18,11 @@ public class UserReportNotificationDto {
     private String movieTitle;
     private String movieThumbnail;
     private String parentId;
+
+    private String videoId;
+    private String videoName;
+    private Long videoDuration;
+    private Integer videoSourceType;
+    private Integer videoState;
+    private String videoThumbnailUrl;
 }
