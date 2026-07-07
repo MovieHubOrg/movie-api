@@ -27,4 +27,11 @@ public class RoomScheduler {
         int deleted = roomService.deleteExpiredPendingRooms();
         log.info("======> End scheduler deleteExpiredPendingRooms, deleted {} room(s)", deleted);
     }
+
+    @Scheduled(cron = "0 0 2 * * *")
+    public void deleteOldEndedRooms() {
+        log.info("======> Start scheduler deleteOldEndedRooms");
+        int deleted = roomService.deleteOldEndedRooms();
+        log.info("======> End scheduler deleteOldEndedRooms, deleted {} room(s)", deleted);
+    }
 }

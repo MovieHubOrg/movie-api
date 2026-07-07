@@ -2,6 +2,7 @@ package com.movie.api.storage.repository;
 
 import com.movie.api.storage.model.Chat;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,4 +14,9 @@ public interface ChatRepository extends JpaRepository<Chat, Long>, JpaSpecificat
     @Transactional
     @Query("DELETE FROM Chat c WHERE c.room.id = :roomId")
     void deleteByRoomId(@Param("roomId") Long roomId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Chat c WHERE c.room.id IN :roomIds")
+    void deleteByRoomIdIn(@Param("roomIds") List<Long> roomIds);
 }

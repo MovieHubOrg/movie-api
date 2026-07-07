@@ -208,6 +208,20 @@ public class RoomService {
         return ids.size();
     }
 
+    @Transactional
+    public int deleteOldEndedRooms() {
+        Date threeDaysAgo = new Date(System.currentTimeMillis() - 3 * 24 * 60 * 60 * 1000L);
+        List<Room> oldRooms = roomRepository.findOldEndedRooms(BaseConstant.ROOM_STATE_ENDING, threeDaysAgo);
+        if (oldRooms.isEmpty()) {
+            return 0;
+        }
+        List<Long> ids = oldRooms.stream().map(Room::getId).collect(Collectors.toList());
+        chatRepository.deleteByRoomIdIn(ids);
+        participantRepository.deleteByRoomIdIn(ids);
+        roomRepository.deleteByIdIn(ids);
+        return ids.size();
+    }
+
     public boolean endRoom(Room room, String reason) {
         if (!BaseConstant.ROOM_STATE_RUNNING.equals(room.getState())) {
             log.info("Skip ending room {} because it is no longer running", room.getId());

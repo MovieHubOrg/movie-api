@@ -262,7 +262,13 @@ public class RoomController extends ABasicController {
     public ApiMessageDto<RoomDto> get(@PathVariable Long id) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("[Room] Not found", ErrorCode.ROOM_ERROR_NOT_FOUND));
-        return makeSuccessResponse(roomMapper.entityToRoomDto(room), "Get room success.");
+        RoomDto roomDto = roomMapper.entityToRoomDto(room);
+        if (Objects.equals(room.getState(), BaseConstant.ROOM_STATE_RUNNING)) {
+            List<Participant> joinedParticipants = participantRepository.findByRoomIdAndState(room.getId(), BaseConstant.PARTICIPANT_STATE_JOIN);
+            roomDto.setCurrentViewers(joinedParticipants.size());
+            roomDto.setParticipants(participantMapper.fromEntityToParticipantDtoForRoomList(joinedParticipants));
+        }
+        return makeSuccessResponse(roomDto, "Get room success.");
     }
 
     @GetMapping(value = "/get-by-code/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
