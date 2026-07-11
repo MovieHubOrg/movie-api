@@ -18,4 +18,11 @@ public class DetectorCommentForm {
      */
     @JsonProperty("type")
     private Integer type;
+
+    /**
+     * Scan token echoed back by the detector so a stale reply (for content the
+     * user has since edited again) can be discarded. See CommentService.
+     */
+    @JsonProperty("scan_version")
+    private Integer scanVersion;
 }

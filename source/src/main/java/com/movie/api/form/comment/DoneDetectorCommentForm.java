@@ -18,4 +18,12 @@ public class DoneDetectorCommentForm {
     private List<ToxicSpanForm> toxicSpans;
 
     private Integer type;
+
+    /**
+     * Echoed back from the detect request; used to drop stale replies when the
+     * content was edited again while a scan was in flight. May be null if the
+     * detector has not yet been updated to echo it.
+     */
+    @JsonProperty("scan_version")
+    private Integer scanVersion;
 }

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -69,13 +70,14 @@ public class CommentService {
     @Autowired
     private SettingCacheService settingCacheService;
 
-    public void sendCommentToToxicDetector(Long objectId, String content, Integer type) {
+    public void sendCommentToToxicDetector(Long objectId, String content, Integer type, Integer scanVersion) {
         try {
-            log.info("==> Sending comment to toxic detector: {} type : {}", objectId, type);
+            log.info("==> Sending comment to toxic detector: {} type : {} scanVersion : {}", objectId, type, scanVersion);
             DetectorCommentForm form = new DetectorCommentForm();
             form.setCommentId(objectId);
             form.setContent(content);
             form.setType(type);
+            form.setScanVersion(scanVersion);
             rabbitService.handleSendMsg(appName, toxicCommentDetectorQueue, form, BaseConstant.CMD_DETECTOR_COMMENT);
         } catch (Exception e) {
             log.error("Failed to send comment to toxic detector: {}", e.getMessage());
@@ -92,17 +94,46 @@ public class CommentService {
         Comment comment = commentRepository.findById(form.getCommentId())
                 .orElseThrow(() -> new NotFoundException("[Comment] not found"));
 
-        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), comment.getContent());
-        if (toxicSpans.isEmpty()) {
-            log.info("Comment {} has no toxic spans after keyword filtering", form.getCommentId());
+        if (isStaleScan(form.getScanVersion(), comment.getDetectVersion())) {
+            log.info("Skip stale detector reply for comment {} (reply v{} != current v{})",
+                    form.getCommentId(), form.getScanVersion(), comment.getDetectVersion());
             return;
         }
 
+        Integer oldStatus = comment.getStatus();
+        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), comment.getContent());
+
+        if (toxicSpans.isEmpty()) {
+            log.info("Comment {} has no toxic spans after keyword filtering", form.getCommentId());
+            comment.setToxicSpans(null);
+            if (!Objects.equals(oldStatus, BaseConstant.STATUS_ACTIVE)) {
+                comment.setStatus(BaseConstant.STATUS_ACTIVE);
+                commentRepository.save(comment);
+                if (Objects.equals(oldStatus, BaseConstant.STATUS_LOCK)) {
+                    sendCommentUnlockedNotification(comment);
+                }
+            }
+            return;
+        }
+
+        boolean newlyLocked = !Objects.equals(oldStatus, BaseConstant.STATUS_LOCK);
         comment.setStatus(BaseConstant.STATUS_LOCK);
         comment.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
         commentRepository.save(comment);
 
-        sendToxicCommentNotification(comment);
+        if (newlyLocked) {
+            sendToxicCommentNotification(comment);
+        }
+    }
+
+    /**
+     * A detector reply is stale when it carries a scan version that no longer
+     * matches the entity's current version — meaning the content was edited
+     * again (and re-sent) while this scan was in flight. A null reply version
+     * means the detector has not been updated to echo it yet; treat as current.
+     */
+    private boolean isStaleScan(Integer replyScanVersion, Integer currentDetectVersion) {
+        return replyScanVersion != null && !replyScanVersion.equals(currentDetectVersion);
     }
 
     public void sendToxicCommentNotification(Comment comment) {
@@ -149,17 +180,36 @@ public class CommentService {
         Review review = reviewRepository.findById(form.getCommentId())
                 .orElseThrow(() -> new NotFoundException("[Review] not found"));
 
-        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), review.getContent());
-        if (toxicSpans.isEmpty()) {
-            log.info("Review {} has no toxic spans after keyword filtering", form.getCommentId());
+        if (isStaleScan(form.getScanVersion(), review.getDetectVersion())) {
+            log.info("Skip stale detector reply for review {} (reply v{} != current v{})",
+                    form.getCommentId(), form.getScanVersion(), review.getDetectVersion());
             return;
         }
 
+        Integer oldStatus = review.getStatus();
+        List<ToxicSpanForm> toxicSpans = applyToxicKeywordSettings(form.getToxicSpans(), review.getContent());
+
+        if (toxicSpans.isEmpty()) {
+            log.info("Review {} has no toxic spans after keyword filtering", form.getCommentId());
+            review.setToxicSpans(null);
+            if (!Objects.equals(oldStatus, BaseConstant.STATUS_ACTIVE)) {
+                review.setStatus(BaseConstant.STATUS_ACTIVE);
+                reviewRepository.save(review);
+                if (Objects.equals(oldStatus, BaseConstant.STATUS_LOCK)) {
+                    sendReviewUnlockedNotification(review);
+                }
+            }
+            return;
+        }
+
+        boolean newlyLocked = !Objects.equals(oldStatus, BaseConstant.STATUS_LOCK);
         review.setStatus(BaseConstant.STATUS_LOCK);
         review.setToxicSpans(objectMapper.writeValueAsString(toxicSpans));
         reviewRepository.save(review);
 
-        sendToxicReviewNotification(review);
+        if (newlyLocked) {
+            sendToxicReviewNotification(review);
+        }
     }
 
     public void sendToxicReviewNotification(Review review) {

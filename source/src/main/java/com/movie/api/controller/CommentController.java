@@ -124,8 +124,9 @@ public class CommentController extends ABasicController {
             comment.setParent(parent);
         }
 
+        comment.setDetectVersion(comment.getDetectVersion() + 1);
         commentRepository.save(comment);
-        commentService.sendCommentToToxicDetector(comment.getId(), comment.getContent(), BaseConstant.TOXIC_DETECT_TYPE_COMMENT);
+        commentService.sendCommentToToxicDetector(comment.getId(), comment.getContent(), BaseConstant.TOXIC_DETECT_TYPE_COMMENT, comment.getDetectVersion());
         movieService.calculateComment(comment.getMovieId(), BaseConstant.ACTION_ADD);
         if (comment.getReplyTo() != null && !Objects.equals(author.getId(), comment.getReplyTo().getId())) {
             createReplyNotificationTemplate(comment, author, comment.getReplyTo(), movie);
@@ -175,6 +176,7 @@ public class CommentController extends ABasicController {
         return makeSuccessResponse(makeResponseListDto(comments, commentMapper::fromEntityToCommentDtoList), "Get list comment success");
     }
 
+    @Transactional
     @PutMapping(value = "/update", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CMT_U')")
     public ApiMessageDto<Void> update(@Valid @RequestBody UpdateCommentForm form) {
@@ -185,8 +187,22 @@ public class CommentController extends ABasicController {
             throw new UnauthorizationException("Not allow");
         }
 
+        // Content unchanged -> nothing to re-scan, keep current status/visibility.
+        if (Objects.equals(comment.getContent(), form.getContent())) {
+            return makeSuccessResponse("Update comment success");
+        }
+
         comment.setContent(form.getContent());
+        // Old spans are stale against the new text; hide the comment until the
+        // re-scan clears it. Keep STATUS_LOCK if it was already blocked so the
+        // reply handler knows to send the unlock notification once it comes back clean.
+        comment.setToxicSpans(null);
+        if (!Objects.equals(comment.getStatus(), BaseConstant.STATUS_LOCK)) {
+            comment.setStatus(BaseConstant.STATUS_PENDING);
+        }
+        comment.setDetectVersion(comment.getDetectVersion() + 1);
         commentRepository.save(comment);
+        commentService.sendCommentToToxicDetector(comment.getId(), comment.getContent(), BaseConstant.TOXIC_DETECT_TYPE_COMMENT, comment.getDetectVersion());
         return makeSuccessResponse("Update comment success");
     }
 

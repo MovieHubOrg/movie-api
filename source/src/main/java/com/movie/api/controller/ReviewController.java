@@ -93,9 +93,10 @@ public class ReviewController extends ABasicController {
         Review review = reviewMapper.fromCreateReviewFormToEntity(form);
         review.setAuthor(user);
         review.setMovieId(movie.getId());
+        review.setDetectVersion(review.getDetectVersion() + 1);
         reviewRepository.save(review);
 
-        commentService.sendCommentToToxicDetector(review.getId(), review.getContent(), BaseConstant.TOXIC_DETECT_TYPE_REVIEW);
+        commentService.sendCommentToToxicDetector(review.getId(), review.getContent(), BaseConstant.TOXIC_DETECT_TYPE_REVIEW, review.getDetectVersion());
 
         ReviewStatisticsDto statistics = movieService.calculateReview(movie.getId(), review.getRate(), BaseConstant.ACTION_ADD);
         movieService.applyReviewRatingPreference(user.getId(), movie.getId(), review.getRate());
@@ -142,8 +143,22 @@ public class ReviewController extends ABasicController {
         }
 
         Integer oldRate = review.getRate();
+        String oldContent = review.getContent();
         reviewMapper.fromUpdateReviewFormToEntity(form, review);
+
+        // Content changed -> hide until the detector re-scans (keep STATUS_LOCK if
+        // already blocked so a clean reply can send the unlock notification).
+        if (!Objects.equals(oldContent, review.getContent())) {
+            review.setToxicSpans(null);
+            if (!Objects.equals(review.getStatus(), BaseConstant.STATUS_LOCK)) {
+                review.setStatus(BaseConstant.STATUS_PENDING);
+            }
+            review.setDetectVersion(review.getDetectVersion() + 1);
+        }
         reviewRepository.save(review);
+        if (!Objects.equals(oldContent, review.getContent())) {
+            commentService.sendCommentToToxicDetector(review.getId(), review.getContent(), BaseConstant.TOXIC_DETECT_TYPE_REVIEW, review.getDetectVersion());
+        }
 
         Integer newRate = review.getRate();
         if (!Objects.equals(oldRate, newRate)) {

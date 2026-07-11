@@ -51,4 +51,7 @@ public class Comment extends Auditable<String> {
 
     @Column(name = "toxic_spans", columnDefinition = "TEXT")
     private String toxicSpans;
+
+    @Column(name = "detect_version")
+    private Integer detectVersion = 0;
 }
